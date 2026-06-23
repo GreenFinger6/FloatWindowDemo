@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 背景颜色：半透明深灰色/黑色，显得比较高级 -->
+    <solid android:color="#CC222222" />
+
+    <!-- 圆角：设置为高度的一半或者固定较大数值 -->
+    <corners android:radius="20dp" />
+
+    <!-- 边缘留白（可选） -->
+    <padding
+        android:bottom="4dp"
+        android:left="12dp"
+        android:right="12dp"
+        android:top="4dp" />
+</shape>

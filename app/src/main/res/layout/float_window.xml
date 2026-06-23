@@ -14,7 +14,7 @@
         android:background="@drawable/float_ball_bg"
         android:padding="@dimen/float_margin"/>
 
-    <!-- 修改后的控制面板：由 vertical 改为 horizontal -->
+    <!-- 控制面板-->
     <LinearLayout
         android:id="@+id/ll_control_panel"
         android:layout_width="wrap_content"

@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -18,11 +20,16 @@ import com.example.floatwindowdemo.utils.DensityUtil
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
+import com.example.floatwindowdemo.databinding.LayoutToastBinding
 
 class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
+    // Toast 专用变量
+    private var toastView: View? = null
+    private var toastBinding: LayoutToastBinding? = null // 假设你启用了 ViewBinding
+    private val toastHandler = Handler(Looper.getMainLooper())
 
     private var lastX = 0
     private var lastY = 0
@@ -35,7 +42,13 @@ class FloatWindowService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+        // 1. 初始化悬浮球和面板
         initFloatWindow()
+
+        // 2. 初始化立提示窗口
+        initToastWindow()
+
         // Service 启动后的 5秒内 调用 startForeground()
         startForeground(NOTIFICATION_ID, createNotification())
     }
@@ -96,18 +109,46 @@ class FloatWindowService : Service() {
         }
 
         binding.btnStartScript.setOnClickListener {
-            Toast.makeText(this, "✅ 脚本已开始运行", Toast.LENGTH_SHORT).show()
+            showCustomToast("✅ 脚本已开始运行")
         }
 
         binding.btnPauseScript.setOnClickListener {
-            Toast.makeText(this, "⏸️ 脚本已暂停", Toast.LENGTH_SHORT).show()
+            showCustomToast("⏸️ 脚本已暂停")
         }
 
         binding.btnStopScript.setOnClickListener {
-            Toast.makeText(this, "❌ 脚本已停止", Toast.LENGTH_SHORT).show()
+            showCustomToast("❌ 脚本已停止")
         }
     }
 
+    private fun initToastWindow() {
+        // 使用 ViewBinding 加载layout_toast.xml
+        toastBinding = LayoutToastBinding.inflate(LayoutInflater.from(this))
+
+        val toastParams = WindowManager.LayoutParams().apply {
+            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+
+            // 关键点：FLAG_NOT_FOCUSABLE 不抢占焦点
+            // FLAG_NOT_TOUCHABLE 确保点击穿透，用户点到提示框位置依然能操作底下的应用
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+
+            format = PixelFormat.TRANSLUCENT
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            width = WindowManager.LayoutParams.MATCH_PARENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
+        }
+
+        toastView = toastBinding?.root
+        toastView?.visibility = View.GONE // 初始隐藏
+        windowManager.addView(toastView, toastParams)
+    }
+
+    // 后台运行任务栏显示信息
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -128,6 +169,41 @@ class FloatWindowService : Service() {
             .setContentText("正在后台运行")
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
+    }
+    // 后台运行时消息显示方法
+
+    private fun showCustomToast(message: String) {
+        // 1. 取消之前的隐藏任务
+        toastHandler.removeCallbacksAndMessages(null)
+
+        val view = toastView ?: return
+        val tvContent = toastBinding?.tvToastContent ?: return
+
+        tvContent.text = message
+
+        // 2. 显示动画：淡入 + 从上方滑入
+        if (view.visibility == View.GONE) {
+            view.visibility = View.VISIBLE
+            view.alpha = 0f
+            view.translationY = -50f // 初始向上偏移
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(300)
+                .start()
+        }
+
+        // 3. 2.5秒后自动隐藏动画
+        toastHandler.postDelayed({
+            view.animate()
+                .alpha(0f)
+                .translationY(-50f)
+                .setDuration(300)
+                .withEndAction {
+                    view.visibility = View.GONE
+                }
+                .start()
+        }, 2500)
     }
 
     override fun onDestroy() {
