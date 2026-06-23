@@ -1,0 +1,5 @@
+<resources>
+    <!-- 统一设置悬浮窗和按钮的大小 -->
+    <dimen name="float_size">60dp</dimen>
+    <dimen name="float_margin">8dp</dimen>
+</resources>

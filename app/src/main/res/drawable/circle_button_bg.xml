@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval"> <!-- 设置为椭圆，当宽高相等时即为正圆 -->
+    <solid android:color="#4A90E2" /> <!-- 按钮颜色，可自定义 -->
+    <size android:width="60dp" android:height="60dp" />
+</shape>

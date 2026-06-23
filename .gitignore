@@ -1,0 +1,35 @@
+# 编译生成的文件
+*.iml
+.gradle/
+build/
+app/build/
+app/release/
+app/debug/
+local.properties
+*.apk
+*.ap_
+*.dex
+
+# IDE配置文件
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+/local.properties
+
+# 签名文件
+*.jks
+*.keystore
+
+# 日志文件
+*.log
+
+# 系统文件
+Thumbs.db

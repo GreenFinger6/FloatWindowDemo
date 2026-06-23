@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"> <!-- 保持水平，确保面板在球右侧 -->
+
+    <!-- 悬浮球 -->
+    <com.example.floatwindowdemo.view.DraggableFloatBall
+        android:id="@+id/iv_float_ball"
+        android:layout_width="@dimen/float_size"
+        android:layout_height="@dimen/float_size"
+        android:src="@mipmap/ic_launcher"
+        android:background="@drawable/float_ball_bg"
+        android:padding="@dimen/float_margin"/>
+
+    <!-- 修改后的控制面板：由 vertical 改为 horizontal -->
+    <LinearLayout
+        android:id="@+id/ll_control_panel"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/float_size"
+        android:orientation="horizontal"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
+        android:layout_marginStart="@dimen/float_margin">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_start_script"
+            android:layout_width="@dimen/float_size"
+            android:layout_height="@dimen/float_size"
+            android:text="开始"
+            android:background="@drawable/circle_button_bg"
+            android:layout_marginEnd="@dimen/float_margin"
+            android:gravity="center"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_pause_script"
+            android:layout_width="@dimen/float_size"
+            android:layout_height="@dimen/float_size"
+            android:text="暂停"
+            android:background="@drawable/circle_button_bg"
+            android:layout_marginEnd="@dimen/float_margin"
+            android:gravity="center"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_stop_script"
+            android:layout_width="@dimen/float_size"
+            android:layout_height="@dimen/float_size"
+            android:text="结束"
+            android:background="@drawable/circle_button_bg"
+            android:gravity="center"/>
+
+    </LinearLayout>
+</LinearLayout>
