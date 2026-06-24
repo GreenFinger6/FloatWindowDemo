@@ -54,4 +54,6 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // 添加 ViewPager2 库
     implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // Google ML Kit 文字识别（中文及通用模型）
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
 }
