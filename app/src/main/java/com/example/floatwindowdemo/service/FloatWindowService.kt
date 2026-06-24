@@ -1,5 +1,6 @@
 package com.example.floatwindowdemo.service
 
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -15,16 +16,21 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.LayoutInflater
+import android.graphics.Rect
 import com.example.floatwindowdemo.utils.DensityUtil
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
 import com.example.floatwindowdemo.databinding.LayoutToastBinding
+import com.example.floatwindowdemo.manager.OcrManager
+import com.example.floatwindowdemo.manager.ScreenCaptureManager
 
 class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
+    private lateinit var ocrManager: OcrManager
+    private lateinit var screenCaptureManager: ScreenCaptureManager
 
     // Toast 专用变量，允许为空防止加载失败影响悬浮窗
     private var toastView: View? = null
@@ -41,17 +47,38 @@ class FloatWindowService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        setTheme(R.style.Theme_FloatWindowDemo)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         // 1. 初始化悬浮球和面板
         initFloatWindow()
 
-        // 2. 初始化立提示窗口
+        // 2. 初始化提示窗口
         initToastWindow()
 
         // Service 启动后的 5秒内 调用 startForeground()
         startForeground(NOTIFICATION_ID, createNotification())
+
+        // 创建相关模型单例
+        ocrManager = OcrManager(this)
+        screenCaptureManager = ScreenCaptureManager(this)
     }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 拿到 MainActivity 传过来的通行证
+        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("SCREEN_CAPTURE_DATA", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<Intent>("SCREEN_CAPTURE_DATA")
+        }
+        if (data != null) {
+            // 传入 RESULT_OK 和 令牌
+            screenCaptureManager.init(Activity.RESULT_OK, data)
+        }
+        return START_STICKY
+    }
+
 
     private fun initFloatWindow() {
         binding = FloatWindowBinding.inflate(LayoutInflater.from(this))
@@ -110,6 +137,7 @@ class FloatWindowService : Service() {
 
         binding.btnStartScript.setOnClickListener {
             showCustomToast("✅ 脚本已开始运行")
+            startAutoOcr()
         }
 
         binding.btnPauseScript.setOnClickListener {
@@ -118,6 +146,28 @@ class FloatWindowService : Service() {
 
         binding.btnStopScript.setOnClickListener {
             showCustomToast("❌ 脚本已停止")
+            screenCaptureManager.stopStreaming()
+        }
+    }
+    private fun startAutoOcr() {
+        val metrics = resources.displayMetrics
+        val centerX = metrics.widthPixels / 2
+        val centerY = metrics.heightPixels / 2
+
+        // (x1, y1, x2, y2) 矩形左上角坐标，右下角坐标
+        val area = Rect(centerX - 200, centerY - 200, centerX + 200, centerY + 200)
+
+        screenCaptureManager.startStreaming(area) { bitmap, onTaskComplete ->
+            // 1. 拿到最新截图，喂给 OCR
+            ocrManager.recognizeText(bitmap, { text ->
+                // 2. 识别成功：处理你的业务逻辑（比如输出结果）
+                showCustomToast("实时结果: $text")
+                // 3. 关键：通知 Manager 识别完了，可以截下一张了
+                onTaskComplete()
+            }, { error ->
+                // 失败也要通知，否则流程就断了
+                onTaskComplete()
+            })
         }
     }
 
@@ -227,6 +277,15 @@ class FloatWindowService : Service() {
         }
         // 移除所有尚未执行的定时隐藏任务，防止服务销毁后还尝试操作 UI
         toastHandler.removeCallbacksAndMessages(null)
+
+        // 释放 ML Kit 引擎和屏幕采集会话，防止内存泄漏和通知栏残留
+        if (::ocrManager.isInitialized) {
+            ocrManager.release()
+        }
+        if (::screenCaptureManager.isInitialized) {
+            screenCaptureManager.stop()
+        }
+
     }
 
     override fun onBind(intent: Intent?): IBinder? {

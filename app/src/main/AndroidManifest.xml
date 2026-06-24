@@ -32,8 +32,10 @@
         <!-- 悬浮窗服务声明（必须加，否则服务无法启动） -->
         <service
             android:name=".service.FloatWindowService"
+            android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="mediaProjection"
+            tools:ignore="ForegroundServicePermission" />
 
     </application>
 

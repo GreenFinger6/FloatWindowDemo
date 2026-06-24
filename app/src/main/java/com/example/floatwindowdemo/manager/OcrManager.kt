@@ -14,7 +14,8 @@ class OcrManager(private val context: Context) {
     /**
      * 执行 OCR 识别
      * @param bitmap 已经裁剪好的区域图片
-     * @param onResult 成功回调
+     * @param onResult 成功回调，返回识别到的文字字符串
+     * @param onError 失败回调，返回异常信息
      */
     fun recognizeText(bitmap: Bitmap, onResult: (String) -> Unit, onError: (Exception) -> Unit) {
         val image = InputImage.fromBitmap(bitmap, 0)
