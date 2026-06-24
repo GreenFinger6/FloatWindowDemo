@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1. 最外层必须是一个 ScrollView，这样内容多了才能滚 -->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <!-- 2. ScrollView 内部只能有一个直接子 View，所以用 LinearLayout 包裹 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️ 其他设置页面"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- 模拟很多控件 -->
+        <!-- 控件 1 -->
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switch1"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="设置项 1" />
+
+        <!-- 控件 2... 到 控件 20 -->
+        <!-- 当你复制很多个控件到这里时，它们就可以上下滚动了 -->
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

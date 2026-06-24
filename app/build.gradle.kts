@@ -50,4 +50,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // 添加 Material 库（包含 TabLayout）
+    implementation("com.google.android.material:material:1.12.0")
+    // 添加 ViewPager2 库
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
 }

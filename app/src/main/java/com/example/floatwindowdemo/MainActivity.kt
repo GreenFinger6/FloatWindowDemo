@@ -7,8 +7,13 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.example.floatwindowdemo.databinding.ActivityMainBinding
 import com.example.floatwindowdemo.service.FloatWindowService
+import com.example.floatwindowdemo.view.GeneralSettingsFragment
+import com.example.floatwindowdemo.view.OtherSettingsFragment
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -20,6 +25,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 设置 androidx . viewpager2 . widget . ViewPager2 的适配器
+        val adapter = SettingPagerAdapter(this)
+        binding.viewPager.adapter = adapter
+
+        // 将 TabLayout 与 ViewPager2 关联
+        com.google.android.material.tabs.TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
+            tab.text = when (position) {
+                0 -> "通用设置"
+                1 -> "其他设置"
+                else -> null
+            }
+        }.attach()
 
         // 开启悬浮窗按钮
         binding.btnStartFloat.setOnClickListener {
@@ -33,6 +51,18 @@ class MainActivity : AppCompatActivity() {
         // 关闭悬浮窗按钮
         binding.btnStopFloat.setOnClickListener {
             stopFloatWindowService()
+        }
+    }
+
+    // 内部适配器类
+    inner class SettingPagerAdapter(fa: FragmentActivity) :
+        FragmentStateAdapter(fa) {
+        override fun getItemCount(): Int = 2 // 页签数量
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> GeneralSettingsFragment() // 你定义的通用设置类
+                else -> OtherSettingsFragment() // 其他设置
+            }
         }
     }
 
