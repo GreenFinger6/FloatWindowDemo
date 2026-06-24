@@ -26,7 +26,8 @@ class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
-    // Toast 专用变量
+
+    // Toast 专用变量，允许为空防止加载失败影响悬浮窗
     private var toastView: View? = null
     private var toastBinding: LayoutToastBinding? = null // 假设你启用了 ViewBinding
     private val toastHandler = Handler(Looper.getMainLooper())
@@ -170,8 +171,8 @@ class FloatWindowService : Service() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
     }
-    // 后台运行时消息显示方法
 
+    // 后台运行时消息显示方法
     private fun showCustomToast(message: String) {
         // 1. 取消之前的隐藏任务
         toastHandler.removeCallbacksAndMessages(null)
@@ -208,9 +209,25 @@ class FloatWindowService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 移除悬浮球和面板窗口
         if (::binding.isInitialized) {
-            windowManager.removeView(binding.root)
+            try {
+                windowManager.removeView(binding.root)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+
+        // 移除独立的提示框窗口
+        toastView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        // 移除所有尚未执行的定时隐藏任务，防止服务销毁后还尝试操作 UI
+        toastHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onBind(intent: Intent?): IBinder? {
