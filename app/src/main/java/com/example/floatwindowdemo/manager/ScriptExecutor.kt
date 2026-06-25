@@ -95,6 +95,7 @@ class ScriptExecutor(
             )
         }
     }
+
     fun stop() {
         isRunning = false
         screenCaptureManager.stopStreaming()

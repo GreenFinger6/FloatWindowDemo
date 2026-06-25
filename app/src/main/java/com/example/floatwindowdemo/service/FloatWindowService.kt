@@ -16,7 +16,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.LayoutInflater
-import com.example.floatwindowdemo.utils.DensityUtil
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
