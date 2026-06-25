@@ -2,6 +2,7 @@ package com.example.floatwindowdemo.manager
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 
 class ScriptExecutor(
@@ -80,6 +81,20 @@ class ScriptExecutor(
         }
     }
 
+    fun showText(){
+        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
+            ocrManager.recognizeText(bitmap,
+                onResult = { text->
+                    val cleanText = text.replace("\n", " ")
+                    Log.d("OcrManager", "📝 [常规识别] -> $cleanText")
+                    onTaskComplete()
+                },
+                onError = {
+                    onTaskComplete()
+                }
+            )
+        }
+    }
     fun stop() {
         isRunning = false
         screenCaptureManager.stopStreaming()

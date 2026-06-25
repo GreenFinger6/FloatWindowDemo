@@ -103,11 +103,11 @@ class FloatWindowService : Service() {
 
             format = PixelFormat.RGBA_8888
 
-            gravity = Gravity.TOP or Gravity.END
+            gravity = Gravity.CENTER
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
-            x = DensityUtil.dp2px(this@FloatWindowService, 16f)
-            y = DensityUtil.dp2px(this@FloatWindowService, 16f)
+            x = 0
+            y = 0
         }
 
         windowManager.addView(binding.root, layoutParams)
@@ -144,9 +144,7 @@ class FloatWindowService : Service() {
 
         binding.btnStartScript.setOnClickListener {
             // 定义你的任务列表
-            val myTasks = listOf("点劵", "消耗品", "超武材料神秘礼盒")
-            // 直接交给执行器，Service 不再自己写 startAutoOcr 的长逻辑了
-            scriptExecutor.execute(myTasks)
+            scriptExecutor.showText();
         }
 
         binding.btnPauseScript.setOnClickListener {
