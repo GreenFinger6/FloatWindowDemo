@@ -29,13 +29,9 @@ class ScreenCaptureManager(private val context: Context) {
 
     /**
      * 开启流式捕捉
-     * @param cropRect 指定识别区域（相对于屏幕像素）。如果为 null 则识别全屏。
      * @param onFrameCaptured 提供 Bitmap
      */
-    fun startStreaming(
-        cropRect: Rect? = null,
-        onFrameCaptured: (bitmap: Bitmap, onTaskComplete: () -> Unit) -> Unit
-    ) {
+    fun startStreaming(onFrameCaptured: (bitmap: Bitmap, onTaskComplete: () -> Unit) -> Unit) {
         if (isStreaming || mediaProjection == null) return
         isStreaming = true
 
@@ -60,26 +56,8 @@ class ScreenCaptureManager(private val context: Context) {
             // acquireLatestImage 保证拿到的是屏幕当前的最新画面，而不是之前排队的旧图
             val image = imageReader?.acquireLatestImage()
             if (image != null) {
-                var bitmap = processImage(image, width, height)
+                val bitmap = processImage(image, width, height)
                 image.close()
-
-                // --- 新增：裁剪逻辑 ---
-                if (cropRect != null) {
-                    try {
-                        // 确保裁剪区域不超出 Bitmap 边界
-                        val realX = cropRect.left.coerceIn(0, bitmap.width - 1)
-                        val realY = cropRect.top.coerceIn(0, bitmap.height - 1)
-                        val realW = cropRect.width().coerceAtMost(bitmap.width - realX)
-                        val realH = cropRect.height().coerceAtMost(bitmap.height - realY)
-
-                        val cropped = Bitmap.createBitmap(bitmap, realX, realY, realW, realH)
-                        // 如果原来的全屏 bitmap 不再需要，可以考虑回收（看具体内存压力）
-                        // bitmap.recycle()
-                        bitmap = cropped
-                    } catch (e: Exception) {
-                        e.printStackTrace() // 防止坐标非法导致崩溃
-                    }
-                }
 
                 // 将 bitmap 发送给 OCR，并传入一个“完成证明”
                 onFrameCaptured(bitmap) {
@@ -115,6 +93,21 @@ class ScreenCaptureManager(private val context: Context) {
             Bitmap.createBitmap(bitmap, 0, 0, width, height)
         } else {
             bitmap
+        }
+    }
+
+    // 裁剪 Bitmap 的专业处理
+    private fun cropBitmap(cropRect: Rect , bitmap: Bitmap): Bitmap{
+        try {
+            // 确保裁剪区域不超出 Bitmap 边界
+            val realX = cropRect.left.coerceIn(0, bitmap.width - 1)
+            val realY = cropRect.top.coerceIn(0, bitmap.height - 1)
+            val realW = cropRect.width().coerceAtMost(bitmap.width - realX)
+            val realH = cropRect.height().coerceAtMost(bitmap.height - realY)
+            return Bitmap.createBitmap(bitmap, realX, realY, realW, realH)
+        } catch (e: Exception) {
+            e.printStackTrace() // 防止坐标非法导致崩溃
+            return bitmap
         }
     }
 

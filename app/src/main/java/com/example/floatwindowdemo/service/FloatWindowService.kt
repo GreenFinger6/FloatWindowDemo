@@ -155,19 +155,26 @@ class FloatWindowService : Service() {
         val centerY = metrics.heightPixels / 2
 
         // (x1, y1, x2, y2) 矩形左上角坐标，右下角坐标
-        val area = Rect(centerX - 200, centerY - 200, centerX + 200, centerY + 200)
+        val cropRect = Rect(centerX - 200, centerY - 200, centerX + 200, centerY + 200)
+        val targetWord = "豆包"
+        // 1. 截图管理器开始截取（全屏或局部）
+        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
+            // 2. OCR 管理器寻找坐标
+            ocrManager.findTextLocation(bitmap, targetWord,
+                onFound = { x, y ->
+                    // 3. 拿到坐标了！
+                    showCustomToast("找到在: ($x, $y)")
 
-        screenCaptureManager.startStreaming(area) { bitmap, onTaskComplete ->
-            // 1. 拿到最新截图，喂给 OCR
-            ocrManager.recognizeText(bitmap, { text ->
-                // 2. 识别成功：处理你的业务逻辑（比如输出结果）
-                showCustomToast("实时结果: $text")
-                // 3. 关键：通知 Manager 识别完了，可以截下一张了
-                onTaskComplete()
-            }, { error ->
-                // 失败也要通知，否则流程就断了
-                onTaskComplete()
-            })
+                    // 这里可以执行你的点击逻辑（比如辅助功能点击）
+
+                    // 停止这一轮识别或继续
+                    onTaskComplete()
+                },
+                onNotFound = {
+                    // 没找到，继续下一次截图识别
+                    onTaskComplete()
+                }
+            )
         }
     }
 
