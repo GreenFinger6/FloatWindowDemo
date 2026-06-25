@@ -1,11 +1,13 @@
 package com.example.floatwindowdemo
 
+import android.content.ComponentName
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -13,10 +15,12 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.example.floatwindowdemo.databinding.ActivityMainBinding
+import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.service.FloatWindowService
 import com.example.floatwindowdemo.view.GeneralSettingsFragment
 import com.example.floatwindowdemo.view.OtherSettingsFragment
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlin.text.equals
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -81,9 +85,17 @@ class MainActivity : AppCompatActivity() {
 
     // 统一的处理流程
     private fun handleStartFlow() {
+
+        // 检查悬浮窗权限
         if (!checkFloatWindowPermission()) {
-            // 1. 没悬浮窗权限，先去申请
             requestFloatWindowPermission()
+            return
+        }
+
+        // 检查无障碍权限
+        if (!isAccessibilityServiceEnabled()) {
+            Toast.makeText(this, "请开启无障碍服务以支持自动点击", Toast.LENGTH_LONG).show()
+            requestAccessibilityPermission()
             return
         }
 
@@ -94,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 2. 走到这里说明悬浮窗权限已有，去申请屏幕采集权限
+        // 申请屏幕采集权限并启动 Service
         requestScreenCapturePermission()
     }
 
@@ -170,5 +182,31 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, FloatWindowService::class.java)
         stopService(intent)
         Toast.makeText(this, "悬浮窗已关闭", Toast.LENGTH_SHORT).show()
+    }
+
+    // 检查无障碍服务是否开启
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedComponentName = ComponentName(this, AutomationService::class.java)
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+
+        if (enabledServices == null) return false
+
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+
+        while (colonSplitter.hasNext()) {
+            val componentName = colonSplitter.next()
+            if (componentName.equals(expectedComponentName.flattenToString(), ignoreCase = true)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    // 跳转到系统设置页面
+    private fun requestAccessibilityPermission() {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
     }
 }

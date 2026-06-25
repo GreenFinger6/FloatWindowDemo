@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">FloatWindowDemo</string>
+
+    <string name="accessibility_desc">此服务用于模拟屏幕点击以实现脚本自动化功能。</string>
 </resources>

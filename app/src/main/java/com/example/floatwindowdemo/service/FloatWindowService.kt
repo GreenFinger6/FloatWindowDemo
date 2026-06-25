@@ -156,7 +156,8 @@ class FloatWindowService : Service() {
 
         // (x1, y1, x2, y2) 矩形左上角坐标，右下角坐标
         val cropRect = Rect(centerX - 200, centerY - 200, centerX + 200, centerY + 200)
-        val targetWord = "豆包"
+
+        val targetWord = "重试"
         // 1. 截图管理器开始截取（全屏或局部）
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
             // 2. OCR 管理器寻找坐标
@@ -166,6 +167,8 @@ class FloatWindowService : Service() {
                     showCustomToast("找到在: ($x, $y)")
 
                     // 这里可以执行你的点击逻辑（比如辅助功能点击）
+                    AutomationService.instance?.click(x, y)
+                        ?: showCustomToast("请先开启无障碍服务！")
 
                     // 停止这一轮识别或继续
                     onTaskComplete()
