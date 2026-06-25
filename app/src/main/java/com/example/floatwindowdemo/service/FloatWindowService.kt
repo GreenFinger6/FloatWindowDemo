@@ -90,6 +90,11 @@ class FloatWindowService : Service() {
     private fun initFloatWindow() {
         binding = FloatWindowBinding.inflate(LayoutInflater.from(this))
 
+        // 获取屏幕宽高
+        val metrics = resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+
         layoutParams = WindowManager.LayoutParams().apply {
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -103,11 +108,14 @@ class FloatWindowService : Service() {
 
             format = PixelFormat.RGBA_8888
 
-            gravity = Gravity.CENTER
+            gravity = Gravity.TOP or Gravity.START
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
-            x = 0
-            y = 0
+
+            // 获取悬浮球大小，并计算中点
+            val ballSize = resources.getDimensionPixelSize(R.dimen.float_size)
+            x = (screenWidth - ballSize) / 2
+            y = (screenHeight - ballSize) / 2
         }
 
         windowManager.addView(binding.root, layoutParams)
@@ -137,7 +145,7 @@ class FloatWindowService : Service() {
 
         // 悬浮球拖拽事件
         binding.ivFloatBall.onDragListener = { dx, dy ->
-            layoutParams.x = layoutParams.x - dx.toInt()
+            layoutParams.x = layoutParams.x + dx.toInt()
             layoutParams.y = layoutParams.y + dy.toInt()
             windowManager.updateViewLayout(binding.root, layoutParams)
         }
