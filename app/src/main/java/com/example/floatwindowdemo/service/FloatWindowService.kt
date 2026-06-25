@@ -16,7 +16,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.LayoutInflater
-import android.graphics.Rect
 import com.example.floatwindowdemo.utils.DensityUtil
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
@@ -24,13 +23,18 @@ import androidx.core.view.isGone
 import com.example.floatwindowdemo.databinding.LayoutToastBinding
 import com.example.floatwindowdemo.manager.OcrManager
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
+import com.example.floatwindowdemo.manager.ScriptExecutor
 
 class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
+    // ocr识别
     private lateinit var ocrManager: OcrManager
+    // 屏幕获取
     private lateinit var screenCaptureManager: ScreenCaptureManager
+    // 任务执行
+    private lateinit var scriptExecutor: ScriptExecutor
 
     // Toast 专用变量，允许为空防止加载失败影响悬浮窗
     private var toastView: View? = null
@@ -62,6 +66,10 @@ class FloatWindowService : Service() {
         // 创建相关模型单例
         ocrManager = OcrManager(this)
         screenCaptureManager = ScreenCaptureManager(this)
+        // Executor脚本执行实例
+        scriptExecutor = ScriptExecutor(screenCaptureManager, ocrManager) { message ->
+            showCustomToast(message)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -78,7 +86,6 @@ class FloatWindowService : Service() {
         }
         return START_STICKY
     }
-
 
     private fun initFloatWindow() {
         binding = FloatWindowBinding.inflate(LayoutInflater.from(this))
@@ -136,8 +143,10 @@ class FloatWindowService : Service() {
         }
 
         binding.btnStartScript.setOnClickListener {
-            showCustomToast("✅ 脚本已开始运行")
-            startAutoOcr()
+            // 定义你的任务列表
+            val myTasks = listOf("点劵", "消耗品", "超武材料神秘礼盒")
+            // 直接交给执行器，Service 不再自己写 startAutoOcr 的长逻辑了
+            scriptExecutor.execute(myTasks)
         }
 
         binding.btnPauseScript.setOnClickListener {
@@ -146,38 +155,7 @@ class FloatWindowService : Service() {
 
         binding.btnStopScript.setOnClickListener {
             showCustomToast("❌ 脚本已停止")
-            screenCaptureManager.stopStreaming()
-        }
-    }
-    private fun startAutoOcr() {
-        val metrics = resources.displayMetrics
-        val centerX = metrics.widthPixels / 2
-        val centerY = metrics.heightPixels / 2
-
-        // (x1, y1, x2, y2) 矩形左上角坐标，右下角坐标
-        val cropRect = Rect(centerX - 200, centerY - 200, centerX + 200, centerY + 200)
-
-        val targetWord = "重试"
-        // 1. 截图管理器开始截取（全屏或局部）
-        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            // 2. OCR 管理器寻找坐标
-            ocrManager.findTextLocation(bitmap, targetWord,
-                onFound = { x, y ->
-                    // 3. 拿到坐标了！
-                    showCustomToast("找到在: ($x, $y)")
-
-                    // 这里可以执行你的点击逻辑（比如辅助功能点击）
-                    AutomationService.instance?.click(x, y)
-                        ?: showCustomToast("请先开启无障碍服务！")
-
-                    // 停止这一轮识别或继续
-                    onTaskComplete()
-                },
-                onNotFound = {
-                    // 没找到，继续下一次截图识别
-                    onTaskComplete()
-                }
-            )
+            scriptExecutor.stop()
         }
     }
 
@@ -268,6 +246,12 @@ class FloatWindowService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // 销毁时停止正在运行的脚本
+        if (::scriptExecutor.isInitialized) {
+            scriptExecutor.stop()
+        }
+
         // 移除悬浮球和面板窗口
         if (::binding.isInitialized) {
             try {
@@ -285,12 +269,13 @@ class FloatWindowService : Service() {
                 e.printStackTrace()
             }
         }
+
         // 移除所有尚未执行的定时隐藏任务，防止服务销毁后还尝试操作 UI
         toastHandler.removeCallbacksAndMessages(null)
 
         // 释放 ML Kit 引擎和屏幕采集会话，防止内存泄漏和通知栏残留
         if (::ocrManager.isInitialized) {
-            ocrManager.release()
+            ocrManager.stop()
         }
         if (::screenCaptureManager.isInitialized) {
             screenCaptureManager.stop()

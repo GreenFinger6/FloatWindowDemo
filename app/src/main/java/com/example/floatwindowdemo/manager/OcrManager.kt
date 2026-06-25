@@ -69,7 +69,7 @@ class OcrManager(private val context: Context) {
     /**
      * 停止 OCR（释放资源）
      */
-    fun release() {
+    fun stop() {
         recognizer.close()
     }
 }
