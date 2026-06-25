@@ -25,11 +25,20 @@ class AutomationService : AccessibilityService() {
     /**
      * 在屏幕指定坐标执行点击
      */
-    fun click(x: Int, y: Int) {
-        val path = Path()
-        path.moveTo(x.toFloat(), y.toFloat())
+    fun click(x: Float, y: Float) {
+        // 获取当前屏幕的绝对像素宽高
+        val metrics = resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
 
-        // 构建点击手势：在 (x,y) 处点按 50 毫秒
+        // 自动转换逻辑：判断是否在 [0, 1] 范围内
+        val finalX = if (x in 0f..1f) x * screenWidth else x
+        val finalY = if (y in 0f..1f) y * screenHeight else y
+
+        val path = Path()
+        path.moveTo(finalX, finalY)
+
+        // 构建点击手势
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
             .build()
@@ -37,10 +46,12 @@ class AutomationService : AccessibilityService() {
         dispatchGesture(gesture, object : GestureResultCallback() {
             override fun onCompleted(gestureDescription: GestureDescription?) {
                 super.onCompleted(gestureDescription)
-                // 点击成功后的逻辑
+                // 这里可以添加点击后的日志或回调
             }
         }, null)
     }
+
+    fun click(x: Int, y: Int) = click(x.toFloat(), y.toFloat())
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // 必须重写，但如果不处理系统事件可以留空
