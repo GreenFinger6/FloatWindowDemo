@@ -151,7 +151,7 @@ class FloatWindowService : Service() {
 
         binding.btnStartScript.setOnClickListener {
             // 定义你的任务列表
-            scriptExecutor.showText();
+            scriptExecutor.test();
         }
 
         binding.btnPauseScript.setOnClickListener {

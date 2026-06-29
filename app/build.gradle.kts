@@ -18,6 +18,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 关键代码：只打包指定的架构
+        ndk {
+            // 'arm64-v8a' 对应现代主流 64 位真机 (如：小米、华为、Vivo、OPPO、三星)
+            // arm64-v8a（现代 64 位手机）、armeabi-v7a（旧款 32 位手机）、x86 和 x86_64（主要是模拟器）
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -56,4 +63,5 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     // Google ML Kit 文字识别（中文及通用模型）
     implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+    implementation (project(":opencv"))
 }

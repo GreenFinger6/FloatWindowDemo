@@ -2,9 +2,12 @@ package com.example.floatwindowdemo.manager
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class OcrManager(private val context: Context) {
 
@@ -17,15 +20,16 @@ class OcrManager(private val context: Context) {
      * @param onResult 成功回调，返回识别到的文字字符串
      * @param onError 失败回调，返回异常信息
      */
-    fun recognizeText(bitmap: Bitmap, onResult: (String) -> Unit, onError: (Exception) -> Unit) {
+    suspend fun recognizeTextAsync(bitmap: Bitmap): String =
+        suspendCancellableCoroutine { continuation ->
         val image = InputImage.fromBitmap(bitmap, 0)
-
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                onResult(visionText.text)
+                continuation.resume(visionText.text) // 恢复协程并返回结果
             }
             .addOnFailureListener { e ->
-                onError(e)
+                Log.e("OcrManager", "OCR 识别失败: ${e.message}")
+                continuation.resume("")
             }
     }
 

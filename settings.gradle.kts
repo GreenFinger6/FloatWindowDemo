@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FloatWindowDemo"
 include(":app")
+include(":opencv")

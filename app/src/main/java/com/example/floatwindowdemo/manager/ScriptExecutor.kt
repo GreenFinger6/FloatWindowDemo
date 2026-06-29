@@ -4,12 +4,16 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
+import com.example.floatwindowdemo.utils.OpencvUtil
+import kotlinx.coroutines.*
 
 class ScriptExecutor(
     private val screenCaptureManager: ScreenCaptureManager,
     private val ocrManager: OcrManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
+    // 创建一个协程作用域，绑定到主线程
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
     private var isRunning = false
 
@@ -83,16 +87,45 @@ class ScriptExecutor(
 
     fun showText(){
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            ocrManager.recognizeText(bitmap,
-                onResult = { text->
+            scope.launch {
+                try {
+                    // 1. 异步执行 OpenCV 或 OCR
+                    val text = withContext(Dispatchers.Default) {
+                        ocrManager.recognizeTextAsync(bitmap)
+                    }
                     val cleanText = text.replace("\n", " ")
-                    Log.d("OcrManager", "📝 [常规识别] -> $cleanText")
-                    onTaskComplete()
-                },
-                onError = {
+                    Log.d("Script", "📝 [常规识别] -> $cleanText")
+                } catch (e: Exception) {
+                    // 处理可能的异常，防止崩溃
+                    Log.e("Script", "本帧处理出错: ${e.message}")
+                } finally {
+                    // 【最关键的地方】
                     onTaskComplete()
                 }
-            )
+            }
+        }
+    }
+
+    fun test(){
+        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
+            // 使用协程处理每一帧，避免卡顿悬浮窗拖拽
+            scope.launch {
+                // 1. 切换到 CPU 密集型线程池进行计算
+                val resultPoint = withContext(Dispatchers.Default) {
+                    // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
+                    OpencvUtil.findImage(bitmap, bitmap, 0.9)
+                }
+
+                // 2. 计算完成后，回到主线程处理结果（launch 默认在 Main）
+                if (resultPoint != null) {
+                    Log.d("OpenCV", "测试匹配成功！中心坐标: x=${resultPoint.x}, y=${resultPoint.y}")
+                    onStatusUpdate("匹配成功: ${resultPoint.x}, ${resultPoint.y}")
+                } else {
+                    Log.e("OpenCV", "测试匹配失败")
+                }
+                // 3. 任务完成，通知捕获下一帧
+                onTaskComplete()
+            }
         }
     }
 
@@ -100,5 +133,7 @@ class ScriptExecutor(
         isRunning = false
         screenCaptureManager.stopStreaming()
         handler.removeCallbacksAndMessages(null)
+        // 取消所有正在运行的协程任务
+        scope.coroutineContext.cancelChildren()
     }
 }
