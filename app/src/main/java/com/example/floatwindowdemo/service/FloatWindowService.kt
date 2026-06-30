@@ -66,7 +66,7 @@ class FloatWindowService : Service() {
         ocrManager = OcrManager(this)
         screenCaptureManager = ScreenCaptureManager(this)
         // Executor脚本执行实例
-        scriptExecutor = ScriptExecutor(screenCaptureManager, ocrManager) { message ->
+        scriptExecutor = ScriptExecutor(this,screenCaptureManager, ocrManager) { message ->
             showCustomToast(message)
         }
     }

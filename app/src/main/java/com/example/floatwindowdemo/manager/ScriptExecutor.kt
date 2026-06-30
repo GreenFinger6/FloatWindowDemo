@@ -1,5 +1,7 @@
 package com.example.floatwindowdemo.manager
 
+import android.content.Context
+import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -8,6 +10,7 @@ import com.example.floatwindowdemo.utils.OpencvUtil
 import kotlinx.coroutines.*
 
 class ScriptExecutor(
+    private val context: Context,
     private val screenCaptureManager: ScreenCaptureManager,
     private val ocrManager: OcrManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
@@ -123,8 +126,26 @@ class ScriptExecutor(
                 } else {
                     Log.e("OpenCV", "测试匹配失败")
                 }
+                // 测试保存图片
+//                saveDebugBitmap(bitmap)
                 // 3. 任务完成，通知捕获下一帧
                 onTaskComplete()
+            }
+        }
+    }
+
+    private fun saveDebugBitmap(bitmap: Bitmap) {
+        // 使用 IO 线程保存，不阻塞主线程
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // data -> data -> com.example.floatwindowdemo -> cache -> debug_frame.png。
+                val file = java.io.File(context.cacheDir, "debug_frame.png")
+                java.io.FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                // Log.d("Script", "调试图片已保存至: ${file.absolutePath}")
+            } catch (e: Exception) {
+                Log.e("Script", "保存图片失败: ${e.message}")
             }
         }
     }
