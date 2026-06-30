@@ -35,53 +35,53 @@ class ScriptExecutor(
 
         onStatusUpdate("脚本启动")
 
+        // 在流开启后，使用 scope.launch 接管每一帧的逻辑
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            if (!isRunning) return@startStreaming
-
-            // 1. 检查任务是否完成
-            if (currentIndex >= taskList.size) {
-                onStatusUpdate("所有任务已完成")
-                stop()
+            if (!isRunning) {
+                onTaskComplete()
                 return@startStreaming
             }
-
-            val targetWord = taskList[currentIndex]
-
-            // 2. 调用 OCR 识别
-            ocrManager.findTextLocation(bitmap, targetWord,
-                onFound = { x, y ->
-                    retryCount = 0
-                    consecutiveCount++
-
-                    if (consecutiveCount >= 2) {
-                        onStatusUpdate("执行点击: $x , $y ")
-
-                        // 3. 执行点击
-                        AutomationService.instance?.click(x, y) ?: onStatusUpdate("❌ 请开启无障碍服务")
-
-                        consecutiveCount = 0
-                        currentIndex++
-
-                        // 4. 点击冷却
-                        handler.postDelayed({
-                            onTaskComplete()
-                        }, CLICK_CD)
-                    } else {
-                        onTaskComplete()
-                    }
-                },
-                onNotFound = {
-                    consecutiveCount = 0
-                    retryCount++
-
-                    if (retryCount >= MAX_RETRY) {
-                        onStatusUpdate("脚本卡住了：找不着 '$targetWord'")
+            scope.launch {
+                try {
+                    // 1. 任务完成检查
+                    if (currentIndex >= taskList.size) {
+                        onStatusUpdate("任务完成")
                         stop()
-                    } else {
-                        onTaskComplete()
+                        return@launch
                     }
+
+                    val targetWord = taskList[currentIndex]
+
+                    // 2. 异步获取结果
+                    val location = withContext(Dispatchers.Default) {
+                        ocrManager.findTextLocationAsync(bitmap, targetWord)
+                    }
+
+                    // 3. 逻辑处理
+                    if (location != null) {
+                        onStatusUpdate("找到文字: $targetWord")
+                        AutomationService.instance?.click(
+                            location.x.toFloat(),
+                            location.y.toFloat()
+                        )
+                        currentIndex++
+                        delay(CLICK_CD) // 延迟不会阻塞主线程，很安全
+                    } else {
+                        onStatusUpdate("未找到: $targetWord")
+                        retryCount++
+                        if (retryCount >= MAX_RETRY) {
+                            onStatusUpdate("脚本卡住了：找不着 '$targetWord'")
+                            stop()
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("Script", "识别过程出错: ${e.message}")
+                } finally {
+                    // 【关键】无论是否找到，无论是否报错，都要通知截取下一帧
+                    onTaskComplete()
                 }
-            )
+            }
         }
     }
 

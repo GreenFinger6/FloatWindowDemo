@@ -8,7 +8,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-
+data class OcrLocation(val x: Int, val y: Int)
 class OcrManager(private val context: Context) {
 
     // 1. 初始化 ML Kit 识别器
@@ -17,8 +17,6 @@ class OcrManager(private val context: Context) {
     /**
      * 执行 OCR 识别
      * @param bitmap 已经裁剪好的区域图片
-     * @param onResult 成功回调，返回识别到的文字字符串
-     * @param onError 失败回调，返回异常信息
      */
     suspend fun recognizeTextAsync(bitmap: Bitmap): String =
         suspendCancellableCoroutine { continuation ->
@@ -34,39 +32,39 @@ class OcrManager(private val context: Context) {
     }
 
     /**
-     * 在图片中查找特定关键字并返回第一个找到的中心坐标
-     * @param bitmap 已经裁剪好的区域图片
+     * 在图片中查找特定关键字并返回第一个找到的中心坐标（挂起函数版）
+     * @param bitmap 图片
      * @param keyword 需要识别的关键字
-     * @param onFound 成功回调，返回识别到的绝对坐标
-     * @param onNotFound 失败回调
+     * @return 找到的坐标对象，若未找到或识别失败则返回 null
      */
-    fun findTextLocation(
+    suspend fun findTextLocationAsync(
         bitmap: Bitmap,
-        keyword: String,
-        onFound: (x: Int, y: Int) -> Unit,
-        onNotFound: () -> Unit
-    ) {
+        keyword: String
+    ): OcrLocation? = suspendCancellableCoroutine { continuation ->
         val image = InputImage.fromBitmap(bitmap, 0)
+
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                var found = false
+                var foundLocation: OcrLocation? = null
+
                 // 遍历所有文本块
                 for (block in visionText.textBlocks) {
-                    // 如果当前块包含关键字（也可以用正则或全匹配）
                     if (block.text.contains(keyword)) {
                         val rect = block.boundingBox
                         if (rect != null) {
-                            // 返回中心点坐标
-                            onFound(rect.centerX(), rect.centerY())
-                            found = true
-                            break // 找到第一个就跳出
+                            foundLocation = OcrLocation(rect.centerX(), rect.centerY())
+                            break // 找到第一个就跳出循环
                         }
                     }
                 }
-                if (!found) onNotFound()
+
+                // 恢复协程并返回结果（可能是坐标，也可能是 null）
+                continuation.resume(foundLocation)
             }
-            .addOnFailureListener {
-                onNotFound()
+            .addOnFailureListener { e ->
+                Log.e("OcrManager", "OCR 识别出错: ${e.message}")
+                // 失败时也恢复协程，返回 null
+                continuation.resume(null)
             }
     }
 
