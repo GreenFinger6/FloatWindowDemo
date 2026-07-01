@@ -90,7 +90,9 @@ class ScreenCaptureManager(private val context: Context) {
 
         // 如果有填充，裁剪掉多余边缘
         return if (rowPadding > 0) {
-            Bitmap.createBitmap(bitmap, 0, 0, width, height)
+            val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+            bitmap.recycle()
+            croppedBitmap
         } else {
             bitmap
         }

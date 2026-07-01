@@ -15,19 +15,20 @@ class ScriptExecutor(
     private val ocrManager: OcrManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
-    // 创建一个协程作用域，绑定到主线程
+    // 创建一个协程作用域，绑定到主线程，才能更新UI
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
     private var isRunning = false
 
-    // 脚本运行状态
-    private var currentIndex = 0
-    private var retryCount = 0
-    private var consecutiveCount = 0
+    // 脚本运行状态参数
+    private var currentIndex = 0 //当前index索引
+    private var retryCount = 0 //重试次数
+    private var consecutiveCount = 0 // 观察到帧计数
+    private val templateCache = mutableMapOf<String, Bitmap>() //缓存 Map，存放预加载的模板
 
     // 配置参数
-    private val MAX_RETRY = 100
-    private val CLICK_CD = 1500L
+    private val MAX_RETRY = 100 // 识别失败最大重复次数
+    private val CLICK_CD = 1500L // 点击延迟
 
     fun execute(taskList: List<String>) {
         if (isRunning) return
@@ -64,8 +65,8 @@ class ScriptExecutor(
                     if (location != null) {
                         onStatusUpdate("找到文字: $targetWord")
                         AutomationService.instance?.click(
-                            location.x.toFloat(),
-                            location.y.toFloat()
+                            location.x,
+                            location.y
                         )
                         currentIndex++
                         delay(CLICK_CD) // 延迟不会阻塞主线程，很安全
@@ -81,7 +82,9 @@ class ScriptExecutor(
                 } catch (e: Exception) {
                     Log.e("Script", "识别过程出错: ${e.message}")
                 } finally {
-                    // 【关键】无论是否找到，无论是否报错，都要通知截取下一帧
+                    // 这一帧处理完了，无论成功失败，立即回收内存
+                    bitmap.recycle()
+                    // 通知截取下一帧
                     onTaskComplete()
                 }
             }
@@ -102,7 +105,9 @@ class ScriptExecutor(
                     // 处理可能的异常，防止崩溃
                     Log.e("Script", "本帧处理出错: ${e.message}")
                 } finally {
-                    // 【最关键的地方】
+                    // 这一帧处理完了，无论成功失败，立即回收内存
+                    bitmap.recycle()
+                    // 通知截取下一帧
                     onTaskComplete()
                 }
             }
@@ -110,30 +115,50 @@ class ScriptExecutor(
     }
 
     fun test(){
+        preloadTemplates(listOf("button_retry"))
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
+            val targetWord = "button_retry"
+            val template = templateCache[targetWord] // 从缓存取，极快
+            // 【解决办法】进行空检查
+            if (template == null) {
+                Log.e("OpenCV", "未能在缓存中找到模板: $targetWord")
+                onTaskComplete() // 记得通知流继续，否则会卡死
+                return@startStreaming // 结束本次回调
+            }
             // 使用协程处理每一帧，避免卡顿悬浮窗拖拽
             scope.launch {
-                // 1. 切换到 CPU 密集型线程池进行计算
-                val resultPoint = withContext(Dispatchers.Default) {
-                    // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
-                    OpencvUtil.findImage(bitmap, bitmap, 0.9)
-                }
-
-                // 2. 计算完成后，回到主线程处理结果（launch 默认在 Main）
-                if (resultPoint != null) {
-                    Log.d("OpenCV", "测试匹配成功！中心坐标: x=${resultPoint.x}, y=${resultPoint.y}")
-                    onStatusUpdate("匹配成功: ${resultPoint.x}, ${resultPoint.y}")
-                } else {
-                    Log.e("OpenCV", "测试匹配失败")
-                }
-                // 测试保存图片
+                try {
+                    // 1. 切换到 CPU 密集型线程池进行计算
+                    val resultPoint = withContext(Dispatchers.Default) {
+                        // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
+                        OpencvUtil.findImage(bitmap, template, 0.9)
+                    }
+                    // 2. 计算完成后，回到主线程处理结果（launch 默认在 Main）
+                    if (resultPoint != null) {
+                        Log.d("OpenCV", "测试匹配成功！中心坐标: x=${resultPoint.x}, y=${resultPoint.y}")
+                        AutomationService.instance?.click(resultPoint.x, resultPoint.y)
+                    } else {
+                        Log.e("OpenCV", "测试匹配失败")
+                    }
+                } catch (e: Exception) {
+                    // 处理可能的异常，防止崩溃
+                    Log.e("Script", "本帧处理出错: ${e.message}")
+                } finally {
+                    // 测试保存图片
 //                saveDebugBitmap(bitmap)
-                // 3. 任务完成，通知捕获下一帧
-                onTaskComplete()
+                    // 这一帧处理完了，无论成功失败，立即回收内存
+                    bitmap.recycle()
+                    // 通知截取下一帧
+                    onTaskComplete()
+                }
             }
         }
     }
 
+    /**
+     * 保存bitmap图片到应用缓存路径
+     * @param bitmap 图片
+     */
     private fun saveDebugBitmap(bitmap: Bitmap) {
         // 使用 IO 线程保存，不阻塞主线程
         CoroutineScope(Dispatchers.IO).launch {
@@ -150,11 +175,53 @@ class ScriptExecutor(
         }
     }
 
+
+    /**
+     * 从 Assets 文件夹读取图片并缓存
+     * @param taskList 图片路径list
+     */
+    private fun preloadTemplates(taskList: List<String>) {
+        // 先手动释放内存，再清空，最后重新加载
+        releaseTemplates()
+        taskList.forEach { taskName ->
+            // 假设图片名和任务名一致
+            val fileName = "templates/$taskName.png"
+            val bitmap = loadBitmapFromAssets(context, fileName)
+            if (bitmap != null) {
+                templateCache[taskName] = bitmap
+            }
+        }
+    }
+
+    /**
+     * 从 Assets 文件夹读取图片并转换为 Bitmap
+     * @param fileName 相对于 assets目录的路径，例如 "templates/button_start.png"
+     */
+    fun loadBitmapFromAssets(context: Context, fileName: String): Bitmap? {
+        return try {
+            context.assets.open(fileName).use { inputStream ->
+                android.graphics.BitmapFactory.decodeStream(inputStream)
+            }
+        } catch (e: Exception) {
+            Log.e("OpencvUtil", "无法读取 Assets 图片: $fileName, 错误: ${e.message}")
+            null
+        }
+    }
+
+    fun releaseTemplates() {
+        // 1. 遍历 Map 中所有的 Bitmap 值，逐个调用 recycle() 释放 Native 内存
+        templateCache.values.forEach { it.recycle() }
+
+        // 2. 清空 Map，断开 Java 对象引用，让 Java GC 可以回收包装对象
+        templateCache.clear()
+    }
+
     fun stop() {
         isRunning = false
         screenCaptureManager.stopStreaming()
         handler.removeCallbacksAndMessages(null)
         // 取消所有正在运行的协程任务
         scope.coroutineContext.cancelChildren()
+        releaseTemplates()
     }
 }

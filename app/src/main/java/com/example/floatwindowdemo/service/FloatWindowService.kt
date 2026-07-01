@@ -151,7 +151,10 @@ class FloatWindowService : Service() {
 
         binding.btnStartScript.setOnClickListener {
             // 定义你的任务列表
-            scriptExecutor.test();
+            val taskList = listOf("微信","定时消息通知测试")
+//            scriptExecutor.execute(taskList)
+//            scriptExecutor.showText()
+            scriptExecutor.test()
         }
 
         binding.btnPauseScript.setOnClickListener {
