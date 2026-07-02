@@ -64,9 +64,9 @@ class FloatWindowService : Service() {
         // Service 启动后的 5秒内 调用 startForeground()
         startForeground(NOTIFICATION_ID, createNotification())
 
-        // 创建相关模型单例
-        ocrManager = OcrManager(this)
-        screenCaptureManager = ScreenCaptureManager(this)
+        // 由 Service 统一管理这些“重型”对象的生命周期
+        ocrManager = OcrManager(this) // OCR识别模型
+        screenCaptureManager = ScreenCaptureManager(this) // 屏幕流失获取
         // Executor脚本执行实例
         scriptExecutor = ScriptExecutor(this,screenCaptureManager, ocrManager) { message ->
             // 当收到消息更新时

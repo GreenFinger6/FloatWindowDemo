@@ -63,5 +63,8 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     // Google ML Kit 文字识别（中文及通用模型）
     implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+    // Android 处理网络的最标准库
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // 自行导入的opencv本地模型
     implementation (project(":opencv"))
 }

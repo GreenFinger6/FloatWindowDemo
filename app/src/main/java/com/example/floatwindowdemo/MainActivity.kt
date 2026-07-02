@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity() {
     // 启动悬浮窗服务
     private fun startFloatWindowService(captureIntent: Intent) {
         val intent = Intent(this, FloatWindowService::class.java).apply {
-            // 将“通行证”放入 Extra 传给 Service
+            // 将“屏幕获取通行证”放入 Extra 传给 Service
             putExtra("SCREEN_CAPTURE_DATA", captureIntent)
         }
 
