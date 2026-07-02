@@ -211,7 +211,11 @@ class FloatWindowService : Service() {
         binding.btnCloseScript.setOnClickListener {
             showCustomToast("退出脚本")
             scriptExecutor.stop()
-
+            // 发送广播通知 MainActivity 关闭
+            val intent = Intent("com.example.floatwindowdemo.ACTION_EXIT")
+            sendBroadcast(intent)
+            // 停止 Service 本身
+            stopSelf()
         }
     }
 
@@ -360,6 +364,18 @@ class FloatWindowService : Service() {
             screenCaptureManager.stop()
         }
 
+        // 停止前台通知（适配 API 33+）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+
+        // 彻底杀掉进程（延迟 300ms 以确保 UI 清理完毕）
+        toastHandler.postDelayed({
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }, 300)
     }
 
     override fun onBind(intent: Intent?): IBinder? {

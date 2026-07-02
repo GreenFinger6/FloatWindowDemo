@@ -1,6 +1,7 @@
 package com.example.floatwindowdemo
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -27,6 +29,13 @@ class MainActivity : AppCompatActivity() {
 
     // 权限请求码
     private val REQUEST_FLOAT_WINDOW_PERMISSION = 1001
+
+    // 退出广播接收器
+    private val exitReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            finishAffinity() // 关闭当前任务栈的所有 Activity
+        }
+    }
 
     // 注册屏幕采集请求的回调
     private val requestScreenCapture = registerForActivityResult(
@@ -46,6 +55,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 接受关闭广播，用于退出程序
+        ContextCompat.registerReceiver(
+            this,    exitReceiver,
+            android.content.IntentFilter("com.example.floatwindowdemo.ACTION_EXIT"),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // 设置 androidx . viewpager2 . widget . ViewPager2 的适配器
         val adapter = SettingPagerAdapter(this)
@@ -68,6 +84,16 @@ class MainActivity : AppCompatActivity() {
         // 关闭悬浮窗按钮
         binding.btnStopFloat.setOnClickListener {
             stopFloatWindowService()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 注销广播接收器，防止内存泄漏
+        try {
+            unregisterReceiver(exitReceiver)
+        } catch (e: Exception) {
+            // 防止重复注销报错
         }
     }
 
