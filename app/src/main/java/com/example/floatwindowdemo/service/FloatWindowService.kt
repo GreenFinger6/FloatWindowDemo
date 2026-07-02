@@ -19,6 +19,7 @@ import android.view.LayoutInflater
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
+import com.example.floatwindowdemo.MainActivity
 import com.example.floatwindowdemo.databinding.LayoutToastBinding
 import com.example.floatwindowdemo.manager.OcrManager
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
@@ -67,7 +68,16 @@ class FloatWindowService : Service() {
         screenCaptureManager = ScreenCaptureManager(this)
         // Executor脚本执行实例
         scriptExecutor = ScriptExecutor(this,screenCaptureManager, ocrManager) { message ->
+            // 当收到消息更新时
             showCustomToast(message)
+            // 自动同步按钮文字逻辑 使用 Handler 确保在主线程更新 UI
+            toastHandler.post {
+                if (!scriptExecutor.isRunning) {
+                    binding.btnStartScript.text = "开始"
+                } else {
+                    binding.btnStartScript.text = if (scriptExecutor.isPaused) "恢复" else "暂停"
+                }
+            }
         }
     }
 
@@ -150,20 +160,57 @@ class FloatWindowService : Service() {
         }
 
         binding.btnStartScript.setOnClickListener {
-            // 定义你的任务列表
-            val taskList = listOf("微信","定时消息通知测试")
-//            scriptExecutor.execute(taskList)
-//            scriptExecutor.showText()
-            scriptExecutor.test()
+            if (!scriptExecutor.isRunning) {
+                // 状态 1：还没运行 -> 点击开始
+                showCustomToast("▶️ 脚本启动")
+                val taskList = listOf("开始游戏","选角")
+                 scriptExecutor.execute(taskList)
+                // scriptExecutor.showText()
+//                scriptExecutor.test() // 开始执行任务
+                binding.btnStartScript.text = "暂停" // 启动后按钮变暂停
+            } else {
+                // 状态 2：正在运行 -> 点击切换 暂停/恢复
+                scriptExecutor.togglePause()
+                if (scriptExecutor.isPaused) {
+                    binding.btnStartScript.text = "恢复"
+                    showCustomToast("⏸️ 脚本已暂停")
+                } else {
+                    binding.btnStartScript.text = "暂停"
+                    showCustomToast("▶️ 脚本已恢复")
+                }
+            }
         }
 
-        binding.btnPauseScript.setOnClickListener {
-            showCustomToast("⏸️ 脚本已暂停")
+        binding.btnSettingScript.setOnClickListener {
+            //1. 如果脚本正在运行且没有处于暂停状态，则触发暂停
+            if (scriptExecutor.isRunning && !scriptExecutor.isPaused) {
+                scriptExecutor.togglePause()
+                // 同步更新开始按钮的文字为“恢复”
+                binding.btnStartScript.text = "恢复"
+            }
+
+            // 2. 跳转回 MainActivity
+            val intent = Intent(this, MainActivity::class.java).apply {
+                // 关键标志位：
+                // FLAG_ACTIVITY_NEW_TASK: Service 跳转 Activity 必须加
+                // FLAG_ACTIVITY_SINGLE_TOP: 如果 Activity 已在后台，则直接把它带到前台，而不是重新创建一个
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(intent)
+
+            // 3.自动收起悬浮窗控制面板，让用户视线更清晰
+            androidx.transition.TransitionManager.beginDelayedTransition(binding.root as android.view.ViewGroup)
+            binding.llControlPanel.visibility = View.GONE
+            windowManager.updateViewLayout(binding.root, layoutParams)
+
+            showCustomToast("⚙️ 进入设置")
         }
 
         binding.btnStopScript.setOnClickListener {
             showCustomToast("❌ 脚本已停止")
             scriptExecutor.stop()
+            // 重置按钮文字为初始状态
+            binding.btnStartScript.text = "开始"
         }
     }
 

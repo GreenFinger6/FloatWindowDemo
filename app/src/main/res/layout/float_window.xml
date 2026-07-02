@@ -34,10 +34,10 @@
             android:gravity="center"/>
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_pause_script"
+            android:id="@+id/btn_setting_script"
             android:layout_width="@dimen/float_size"
             android:layout_height="@dimen/float_size"
-            android:text="暂停"
+            android:text="设置"
             android:background="@drawable/circle_button_bg"
             android:layout_marginEnd="@dimen/float_margin"
             android:gravity="center"/>
