@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 允许访问缓存目录 -->
+    <external-cache-path name="my_cache" path="." />
+    <cache-path name="my_app_cache" path="." />
+</paths>

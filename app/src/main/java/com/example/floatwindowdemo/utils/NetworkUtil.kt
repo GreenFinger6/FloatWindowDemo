@@ -1,11 +1,13 @@
 package com.example.floatwindowdemo.utils
 import android.provider.Settings
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
 
 // 存放登录信息的单例
@@ -15,41 +17,75 @@ object AuthRepo {
 }
 
 object NetworkUtil {
-    private val client = OkHttpClient()
+    private const val TAG = "NetworkUtil"
+
+    // --- 统一管理服务器地址 ---
+    private const val BASE_URL = "https://your-api.com"
+    private const val URL_VERIFY = "$BASE_URL/verify"
+    private const val URL_CHECK_UPDATE = "$BASE_URL/version.json"
+    private const val URL_HEARTBEAT = "$BASE_URL/heartbeat"
+    // -----------------------
+
     private val JSON = "application/json; charset=utf-8".toMediaType()
 
+    // client 初始化
+    private val client: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
+
     /**
-     * 1. 验证卡密 (商用核心)
+     * 【核心抽象方法】
+     * 统一处理：线程切换、执行请求、检查状态、异常捕获、自动关闭资源
      */
-    suspend fun verifyCardCode(cardCode: String): Pair<Boolean, String> =
-        withContext(Dispatchers.IO) {
-            val json = JSONObject().apply {
-                put("cardCode", cardCode)
-                put("deviceId", Settings.Secure.ANDROID_ID)// 绑定设备
-            }
-
-            val request = Request.Builder()
-                .url("https://your-api.com/verify") // 你的服务器地址
-                .post(json.toString().toRequestBody(JSON))
-                .build()
-
-            try {
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        val responseDate = JSONObject(response.body?.string() ?: "")
-                        // 假设服务器返回 {"status": "success", "msg": "验证通过"}
-                        val success = responseDate.optString("status") == "success"
-                        AuthRepo.sessionToken = responseDate.optString("token")
-                        AuthRepo.cardCode = cardCode
-                        Pair(success, responseDate.optString("msg"))
-                    } else {
-                        Pair(false, "服务器连接失败: ${response.code}")
-                    }
+    private suspend fun <T> executeRequest(
+        request: Request,
+        parser: (Response) -> T
+    ): T? = withContext(Dispatchers.IO) {
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    parser(response)
+                } else {
+                    Log.w(TAG, "请求失败: ${request.url} 状态码: ${response.code}")
+                    null
                 }
-            } catch (e: Exception) {
-                Pair(false, "网络错误: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "网络异常: ${request.url} -> ${e.message}")
+            null
         }
+    }
+
+    /**
+     * 1. 验证卡密
+     */
+    suspend fun verifyCardCode(cardCode: String): Pair<Boolean, String> {
+        val json = JSONObject().apply {
+            put("cardCode", cardCode)
+            put("deviceId", Settings.Secure.ANDROID_ID)
+        }
+        val request = Request.Builder()
+            .url(URL_VERIFY)
+            .post(json.toString().toRequestBody(JSON))
+            .build()
+
+        // 使用通用方法解析
+        val result = executeRequest(request) { response ->
+            val data = JSONObject(response.body?.string() ?: "")
+            val success = data.optString("status") == "success"
+            if (success) {
+                AuthRepo.sessionToken = data.optString("token")
+                AuthRepo.cardCode = cardCode
+            }
+            Pair(success, data.optString("msg", "未知响应"))
+        }
+        return result ?: Pair(false, "连接服务器失败")
+    }
+
 
     // 心跳校验方法
     suspend fun checkHeartbeat(): Boolean {
@@ -69,36 +105,64 @@ object NetworkUtil {
     /**
      * 2. 检查在线升级
      */
-    suspend fun checkUpdate(): String? = withContext(Dispatchers.IO) {
+    suspend fun checkUpdate(): JSONObject? {
         val request = Request.Builder()
-            .url("https://your-api.com/version.json")
+            .url(URL_CHECK_UPDATE)
+            .get() // 默认就是 GET，显式写出来更清晰
             .build()
 
-        try {
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val data = JSONObject(response.body?.string() ?: "")
-                    val latestVersion = data.optString("version")
-                    // 如果版本号比当前大，返回下载地址
-                    latestVersion
-                } else null
-            }
-        } catch (e: Exception) {
-            null
+        return executeRequest(request) { response ->
+            JSONObject(response.body?.string() ?: "")
         }
     }
 
     /**
-     * 3. 发送通用 POST 消息 (比如汇报脚本运行状态)
+     * 3. 发送通用 POST 消息
      */
-    suspend fun sendStatusPost(url: String, message: String) = withContext(Dispatchers.IO) {
+    suspend fun sendStatusPost(url: String, message: String) {
         val request = Request.Builder()
             .url(url)
             .post(message.toRequestBody(JSON))
             .build()
-        try {
-            client.newCall(request).execute().close()
-        } catch (e: Exception) {
-        }
+
+        // 这种不需要返回值的，parser 直接返回 Unit
+        executeRequest(request) { /* 仅执行，不需解析内容 */ }
     }
+
+
+    /**
+     * 下载 APK 文件
+     * @param url 下载地址* @param targetFile 存放的目标文件
+     */
+    suspend fun downloadApk(url: String, targetFile: java.io.File, onProgress: (Int) -> Unit): Boolean =
+        withContext(Dispatchers.IO) {
+            val request = Request.Builder().url(url).build()
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext false
+
+                    val body = response.body ?: return@withContext false
+                    val totalSize = body.contentLength()
+                    var downloadedSize = 0L
+
+                    body.byteStream().use { inputStream ->
+                        targetFile.outputStream().use { outputStream ->
+                            val buffer = ByteArray(8 * 1024)
+                            var bytesRead: Int
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                                downloadedSize += bytesRead
+                                // 计算进度并回调
+                                val progress = ((downloadedSize * 100) / totalSize).toInt()
+                                onProgress(progress)
+                            }
+                        }
+                    }
+                    true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "下载失败: ${e.message}")
+                false
+            }
+        }
 }

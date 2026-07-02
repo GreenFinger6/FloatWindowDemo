@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.floatwindowdemo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 1     // 整数，系统用来判断谁的版本更高
+        versionName = "1.0" // 字符串，显示给用户看的版本名
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
