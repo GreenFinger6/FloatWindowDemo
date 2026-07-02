@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval"> <!-- 设置为椭圆，当宽高相等时即为正圆 -->
-    <solid android:color="#4A90E2" /> <!-- 按钮颜色，可自定义 -->
-    <size android:width="60dp" android:height="60dp" />
-</shape>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="oval"> <!-- 设置为椭圆，当宽高相等时即为正圆 -->
+            <solid android:color="@color/button_pressed" /> <!-- 按钮颜色，可自定义 -->
+            <size android:width="@dimen/float_size" android:height="@dimen/float_size" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval"> <!-- 设置为椭圆，当宽高相等时即为正圆 -->
+            <solid android:color="@color/button_bg" /> <!-- 按钮颜色，可自定义 -->
+            <size android:width="@dimen/float_size" android:height="@dimen/float_size" />
+        </shape>
+    </item>
+</selector>

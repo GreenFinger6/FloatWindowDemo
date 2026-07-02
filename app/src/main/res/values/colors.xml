@@ -7,4 +7,21 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 面板主背景：深灰磨砂，90%不透明度，平衡遮挡感和清晰度 -->
+    <color name="panel_bg">#E61A1A1A</color>
+
+    <!-- 按钮背景：中灰半透明，和面板形成层次 -->
+    <color name="button_bg">#80333333</color>
+    <color name="button_pressed">#CC444444</color>
+
+    <!-- 文字与图标通用色 -->
+    <color name="text_white">#FFFFFF</color>          <!-- 主文字/通用图标：纯白，最高对比度 -->
+    <color name="text_secondary">#B3FFFFFF</color>   <!-- 次要文字：70%透明白 -->
+
+    <!-- 功能区分色（符合通用交互直觉） -->
+    <color name="color_start">#4CAF50</color>    <!-- 开始/恢复：柔和绿，代表运行 -->
+    <color name="color_pause">#FF9800</color>    <!-- 暂停：警示橙，代表待命 -->
+    <color name="color_stop">#F44336</color>     <!-- 结束/停止：警示红，代表终止 -->
+    <color name="color_setting">#BBBBBB</color>  <!-- 设置：中性灰，代表工具 -->
 </resources>

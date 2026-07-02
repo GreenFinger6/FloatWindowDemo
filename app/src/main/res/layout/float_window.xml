@@ -29,6 +29,25 @@
             android:layout_width="@dimen/float_size"
             android:layout_height="@dimen/float_size"
             android:text="开始"
+            android:drawableTop="@drawable/ic_play"
+            android:drawablePadding="1dp"
+            android:paddingTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:background="@drawable/circle_button_bg"
+            android:layout_marginEnd="@dimen/float_margin"
+            android:gravity="center"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_stop_script"
+            android:layout_width="@dimen/float_size"
+            android:layout_height="@dimen/float_size"
+            android:text="停止"
+            android:drawableTop="@drawable/ic_stop"
+            android:drawablePadding="1dp"
+            android:paddingTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
             android:background="@drawable/circle_button_bg"
             android:layout_marginEnd="@dimen/float_margin"
             android:gravity="center"/>
@@ -38,17 +57,26 @@
             android:layout_width="@dimen/float_size"
             android:layout_height="@dimen/float_size"
             android:text="设置"
+            android:drawableTop="@drawable/ic_settings"
+            android:drawablePadding="1dp"
+            android:paddingTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
             android:background="@drawable/circle_button_bg"
             android:layout_marginEnd="@dimen/float_margin"
             android:gravity="center"/>
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_stop_script"
+            android:id="@+id/btn_close_script"
             android:layout_width="@dimen/float_size"
             android:layout_height="@dimen/float_size"
-            android:text="结束"
+            android:text="关闭"
+            android:drawableTop="@drawable/ic_close"
+            android:drawablePadding="1dp"
+            android:paddingTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
             android:background="@drawable/circle_button_bg"
             android:gravity="center"/>
-
     </LinearLayout>
 </LinearLayout>

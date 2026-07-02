@@ -16,6 +16,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.LayoutInflater
+import androidx.core.content.ContextCompat
 import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
@@ -72,11 +73,7 @@ class FloatWindowService : Service() {
             showCustomToast(message)
             // 自动同步按钮文字逻辑 使用 Handler 确保在主线程更新 UI
             toastHandler.post {
-                if (!scriptExecutor.isRunning) {
-                    binding.btnStartScript.text = "开始"
-                } else {
-                    binding.btnStartScript.text = if (scriptExecutor.isPaused) "恢复" else "暂停"
-                }
+                updateUI()
             }
         }
     }
@@ -163,30 +160,28 @@ class FloatWindowService : Service() {
             if (!scriptExecutor.isRunning) {
                 // 状态 1：还没运行 -> 点击开始
                 showCustomToast("▶️ 脚本启动")
-                val taskList = listOf("开始游戏","选角")
+                val taskList = listOf("开始游戏","选角", "game")
                  scriptExecutor.execute(taskList)
                 // scriptExecutor.showText()
-//                scriptExecutor.test() // 开始执行任务
-                binding.btnStartScript.text = "暂停" // 启动后按钮变暂停
+                // scriptExecutor.test()
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()
                 if (scriptExecutor.isPaused) {
-                    binding.btnStartScript.text = "恢复"
                     showCustomToast("⏸️ 脚本已暂停")
                 } else {
-                    binding.btnStartScript.text = "暂停"
                     showCustomToast("▶️ 脚本已恢复")
                 }
             }
+            updateUI()
         }
 
         binding.btnSettingScript.setOnClickListener {
             //1. 如果脚本正在运行且没有处于暂停状态，则触发暂停
             if (scriptExecutor.isRunning && !scriptExecutor.isPaused) {
                 scriptExecutor.togglePause()
-                // 同步更新开始按钮的文字为“恢复”
-                binding.btnStartScript.text = "恢复"
+                // 同步更新UI
+                updateUI()
             }
 
             // 2. 跳转回 MainActivity
@@ -203,14 +198,43 @@ class FloatWindowService : Service() {
             binding.llControlPanel.visibility = View.GONE
             windowManager.updateViewLayout(binding.root, layoutParams)
 
-            showCustomToast("⚙️ 进入设置")
+            showCustomToast("进入设置")
         }
 
         binding.btnStopScript.setOnClickListener {
-            showCustomToast("❌ 脚本已停止")
+            showCustomToast("脚本已停止")
             scriptExecutor.stop()
-            // 重置按钮文字为初始状态
+            // 同步更新UI
+            updateUI()
+        }
+
+        binding.btnCloseScript.setOnClickListener {
+            showCustomToast("退出脚本")
+            scriptExecutor.stop()
+
+        }
+    }
+
+    // 更新UI显示
+    private fun updateUI(){
+        if (!scriptExecutor.isRunning) {
+            // 状态: 等待开始
             binding.btnStartScript.text = "开始"
+            val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_play)
+            binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
+        } else {
+            if (scriptExecutor.isPaused){
+                // 等待恢复
+                binding.btnStartScript.text = "恢复"
+                val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_pause)
+                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
+            }else{
+                // 正在运行
+                binding.btnStartScript.text = "暂停"
+                val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_resume)
+                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
+            }
+
         }
     }
 
