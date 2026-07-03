@@ -22,7 +22,7 @@ object NetworkUtil {
     // --- 统一管理服务器地址 ---
     private const val BASE_URL = "https://your-api.com"
     private const val URL_VERIFY = "$BASE_URL/verify"
-    private const val URL_CHECK_UPDATE = "$BASE_URL/version.json"
+    private const val URL_CHECK_UPDATE = "https://raw.githubusercontent.com/GreenFinger6/FloatWindowDemo/refs/heads/main/update_config.json"
     private const val URL_HEARTBEAT = "$BASE_URL/heartbeat"
     // -----------------------
 
@@ -134,8 +134,11 @@ object NetworkUtil {
      * 下载 APK 文件
      * @param url 下载地址* @param targetFile 存放的目标文件
      */
-    suspend fun downloadApk(url: String, targetFile: java.io.File, onProgress: (Int) -> Unit): Boolean =
-        withContext(Dispatchers.IO) {
+    suspend fun downloadApk(
+        url: String,
+        targetFile: java.io.File,
+        onProgress: (Long, Long) -> Unit
+    ): Boolean = withContext(Dispatchers.IO) {
             val request = Request.Builder().url(url).build()
             try {
                 client.newCall(request).execute().use { response ->
@@ -152,9 +155,9 @@ object NetworkUtil {
                             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                                 outputStream.write(buffer, 0, bytesRead)
                                 downloadedSize += bytesRead
-                                // 计算进度并回调
-                                val progress = ((downloadedSize * 100) / totalSize).toInt()
-                                onProgress(progress)
+
+                                // 2. 直接传原始字节，不要在这里做数学运算
+                                onProgress(downloadedSize, totalSize)
                             }
                         }
                     }

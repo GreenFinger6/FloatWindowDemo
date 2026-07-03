@@ -20,6 +20,13 @@ class OtherSettingsFragment : Fragment() {
     private var _binding: FragmentOtherSettingsBinding? = null
     private val binding get() = _binding!!
 
+    // 伴生对象，等价于static
+    companion object {
+        // 使用 const 修饰，性能更高（编译时常量）
+        private const val UPDATE_APK_NAME = "update.apk"
+    }
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -81,7 +88,8 @@ class OtherSettingsFragment : Fragment() {
                     showUpdateDialog(
                         updateInfo.optString("versionName"),
                         updateInfo.optString("updateMsg"),
-                        updateInfo.optString("downloadUrl")
+                        updateInfo.optString("downloadUrl"),
+                        serverVersionCode
                     )
                 } else {
                     Toast.makeText(context, "当前已是最新版本", Toast.LENGTH_SHORT).show()
@@ -90,31 +98,63 @@ class OtherSettingsFragment : Fragment() {
         }
     }
 
-    private fun showUpdateDialog(versionName: String, msg: String, url: String) {
+    private fun showUpdateDialog(versionName: String, msg: String, url: String, serverVersionCode: Int) {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("发现新版本 $versionName")
             .setMessage(msg)
             .setPositiveButton("立即更新") { _, _ ->
-                startDownload(url)
+                startDownload(url,serverVersionCode)
             }
             .setNegativeButton("以后再说", null)
             .show()
     }
 
-    private fun startDownload(url: String) {
+    private fun startDownload(url: String, serverVersionCode: Int) {
+        val apkFile = File(requireContext().externalCacheDir, UPDATE_APK_NAME)
+
+        // --- 判断本地是否存在已下载好的最新包 ---
+        if (apkFile.exists()) {
+            try {
+                val archiveInfo = requireContext().packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+                val localFileCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    archiveInfo?.longVersionCode
+                } else {
+                    archiveInfo?.versionCode?.toLong()
+                }
+
+                // 如果本地文件版本号 等于 服务器版本号，直接安装
+                if (localFileCode == serverVersionCode.toLong()) {
+                    android.util.Log.d("Update", "检测到本地已存在最新安装包，跳过下载")
+                    installApk(requireContext(), apkFile)
+                    return
+                }
+            } catch (e: Exception) {
+                // 如果解析失败（文件损坏等），则删除旧文件重新下载
+                apkFile.delete()
+            }
+        }
+        // ------------------------------------------
+
+        // 如果没有命中上面的 return，则继续执行下载逻辑
         // 创建一个进度条对话框
         val progressDialog = android.app.ProgressDialog(requireContext()).apply {
             setTitle("正在下载更新...")
             setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
-            max = 100
+            // 设置右下角显示格式为 "当前大小/总大小"  %1d 代表当前已下载的值，%2d 代表 setMax 设置的总值
+            setProgressNumberFormat("%1d MB / %2d MB")
             setCancelable(false)
             show()
         }
 
         lifecycleScope.launch {
-            val apkFile = File(requireContext().externalCacheDir, "update.apk")
-            val success = NetworkUtil.downloadApk(url, apkFile) { progress ->
-                progressDialog.progress = progress
+            val apkFile = File(requireContext().externalCacheDir, UPDATE_APK_NAME)
+            // 它回调当前字节数和总字节数
+            val success = NetworkUtil.downloadApk(url, apkFile) { downloaded, total ->
+                // 将字节转为 MB 显示
+                val currentKB = (downloaded / (1024*1024)).toInt()
+                val totalKB = (total / (1024*1024)).toInt()
+                progressDialog.max = totalKB
+                progressDialog.progress = currentKB
             }
 
             progressDialog.dismiss()

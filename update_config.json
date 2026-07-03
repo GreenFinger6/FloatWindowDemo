@@ -1,6 +1,6 @@
 {
   "versionCode": 99,
-  "versionName": "1.9.9",
-  "updateMsg": "1. 修复了找图逻辑\n 2. 增加了网络测试",
+  "versionName": "1.8.8",
+  "updateMsg": "1. 测试更新公告\n2. 增加了网络测试\n3. 啦啦啦啦啦",
   "downloadUrl": "https://github.com/GreenFinger6/FloatWindowDemo/releases/download/v0.1.0-beta/app-debug.apk"
 }
