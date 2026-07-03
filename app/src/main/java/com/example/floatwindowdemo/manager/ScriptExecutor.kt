@@ -6,7 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
+import com.example.floatwindowdemo.utils.GameConfig
 import com.example.floatwindowdemo.utils.OpencvUtil
+import com.example.floatwindowdemo.utils.extractPrice
+import com.example.floatwindowdemo.utils.extractQuantity
 import kotlinx.coroutines.*
 
 class ScriptExecutor(
@@ -15,6 +18,8 @@ class ScriptExecutor(
     private val ocrManager: OcrManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
+    private val TAG = "ScriptExecutor"
+
     // 创建一个协程作用域，绑定到主线程，才能更新UI
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
@@ -46,7 +51,6 @@ class ScriptExecutor(
             // 检查是否点击停止
             if (!isRunning) {
                 onTaskComplete()
-                bitmap.recycle()
                 return@startStreaming
             }
             scope.launch {
@@ -81,7 +85,7 @@ class ScriptExecutor(
 
                         if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
                             // 只有连续观察到指定次数，才认为UI已稳定，执行操作
-                            Log.d("Script","目标稳定，执行点击: $targetWord")
+                            Log.d(TAG,"目标稳定，执行点击: $targetWord")
 
                             AutomationService.instance?.click(
                                 location.x.toFloat(),
@@ -95,15 +99,15 @@ class ScriptExecutor(
                     } else {
                         // 这一帧没找到目标
                         consecutiveCount = 0 // 连续中断，清零
-                        Log.d("Script","未找到: $targetWord")
+                        Log.d(TAG,"未找到: $targetWord")
                         retryCount++
                         if (retryCount >= MAX_RETRY) {
-                            Log.d("Script","脚本卡住了：找不着$targetWord")
+                            Log.d(TAG,"脚本卡住了：找不着$targetWord")
                             stop()
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("Script", "识别过程出错: ${e.message}")
+                    Log.e(TAG, "识别过程出错: ${e.message}")
                 } finally {
                     // 这一帧处理完了，无论成功失败，立即回收内存
                     bitmap.recycle()
@@ -123,10 +127,10 @@ class ScriptExecutor(
                         ocrManager.recognizeTextAsync(bitmap)
                     }
                     val cleanText = text.replace("\n", " ")
-                    Log.d("Script", "📝 [常规识别] -> $cleanText")
+                    Log.d(TAG, "📝 [常规识别] -> $cleanText")
                 } catch (e: Exception) {
                     // 处理可能的异常，防止崩溃
-                    Log.e("Script", "本帧处理出错: ${e.message}")
+                    Log.e(TAG, "本帧处理出错: ${e.message}")
                 } finally {
                     // 这一帧处理完了，无论成功失败，立即回收内存
                     bitmap.recycle()
@@ -137,7 +141,7 @@ class ScriptExecutor(
         }
     }
 
-    fun test(){
+    fun showBitMap(){
         preloadTemplates(listOf("button_retry"))
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
             val targetWord = "button_retry"
@@ -167,7 +171,102 @@ class ScriptExecutor(
                     saveDebugBitmap(bitmap)
                 } catch (e: Exception) {
                     // 处理可能的异常，防止崩溃
-                    Log.e("Script", "本帧处理出错: ${e.message}")
+                    Log.e(TAG, "本帧处理出错: ${e.message}")
+                } finally {
+                    // 这一帧处理完了，无论成功失败，立即回收内存
+                    bitmap.recycle()
+                    // 通知截取下一帧
+                    onTaskComplete()
+                }
+            }
+        }
+    }
+
+    // 拍卖行蹲价格
+    fun test() {
+        if (isRunning) return
+        isRunning = true
+        currentIndex = 0
+        var testStep = 0 // 0: 准备点击商品, 1: 准备识别价格
+        var lastPrice = -1L // 最后一次识别到的价格
+
+        // 在流开启后，使用 scope.launch 接管每一帧的逻辑
+        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
+            // 检查是否点击停止
+            if (!isRunning ) {
+                onTaskComplete()
+                return@startStreaming
+            }
+            scope.launch {
+                try {
+                    // 如果处于暂停状态，就在这里循环等待，每 500ms 检查一次
+                    while (isPaused && isRunning) {
+                        delay(500L) // 挂起 500ms，不阻塞主线程，悬浮窗依然流畅
+                    }
+
+                    // 如果在暂停期间脚本被彻底停止了，直接退出
+                    if (!isRunning) return@launch
+
+                    // 任务完成检查，逻辑终点
+                    if (currentIndex >= MAX_RETRY) {
+                        onStatusUpdate("任务完成")
+                        stop()
+                        return@launch
+                    }
+                    if (testStep == 0) {
+                        // 在列表页点击商品
+                        AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang)
+                        testStep = 1 // 切换到识别阶段
+
+                        // 等 600ms，期间所有新进来的帧都会因为 isProcessing=true 被丢弃
+                        delay(500L)
+
+                    } else{
+                        // 查看价格
+                        val priceBitmap = screenCaptureManager.cropBitmap(GameConfig.Regions.MIN_PRICE, bitmap)
+
+                        // 异步获取结果
+                        val rawText = withContext(Dispatchers.Default) {
+                            ocrManager.recognizeTextAsync(priceBitmap)
+                        }
+
+                        // 裁剪出的临时图片用完立即回收
+                        priceBitmap.recycle()
+
+                        // 使用正则从 String 中提取信息 (逻辑解耦)
+                        val price = extractPrice(rawText)
+                        val quantity = extractQuantity(rawText)
+
+                        // --- 价格稳定性校验逻辑 ---
+                        if (price > 0 && price == lastPrice) {
+                            consecutiveCount++
+                        } else {
+                            lastPrice = price
+                            consecutiveCount = 0
+                        }
+
+                        if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
+                            // --- 价格已稳定，执行业务逻辑 ---
+                            Log.e(TAG,"当前价格: $price, 数量: $quantity")
+
+                            // 是否需要购买
+
+                            // 操作完后，返回商品列表
+                            AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
+
+                            // 重置所有状态，进入下一个循环
+                            testStep = 0 // 切换到点击阶段
+                            lastPrice = -1L
+                            consecutiveCount = 0
+                            currentIndex++ //进入下次任务
+                            delay(500L) // 等待返回列表的动画
+                        } else {
+                            // 价格未稳定，继续留在本步骤识别下一帧 ---
+                            delay(100L) // 给一点微小的间歇，防止 OCR 跑得太快占满 CPU
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "识别过程出错: ${e.message}")
                 } finally {
                     // 这一帧处理完了，无论成功失败，立即回收内存
                     bitmap.recycle()
@@ -191,9 +290,9 @@ class ScriptExecutor(
                 java.io.FileOutputStream(file).use { out ->
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
-                Log.d("Script", "调试图片已保存至: ${file.absolutePath}")
+                Log.d(TAG, "调试图片已保存至: ${file.absolutePath}")
             } catch (e: Exception) {
-                Log.e("Script", "保存图片失败: ${e.message}")
+                Log.e(TAG, "保存图片失败: ${e.message}")
             }
         }
     }

@@ -52,8 +52,8 @@ class AutomationService : AccessibilityService() {
     }
 
     fun click(x: Int, y: Int) = click(x.toFloat(), y.toFloat())
-
     fun click(x: Double, y: Double) = click(x.toFloat(), y.toFloat())
+    fun click(t: Pair<Float, Float>) = click(t.first, t.second)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // 必须重写，但如果不处理系统事件可以留空

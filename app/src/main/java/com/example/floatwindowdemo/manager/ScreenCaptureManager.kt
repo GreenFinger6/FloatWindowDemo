@@ -11,8 +11,9 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.core.graphics.createBitmap
-import android.graphics.Rect
+import com.example.floatwindowdemo.utils.RectArea
 
 class ScreenCaptureManager(private val context: Context) {
     private var mediaProjection: MediaProjection? = null
@@ -99,16 +100,25 @@ class ScreenCaptureManager(private val context: Context) {
     }
 
     // 裁剪 Bitmap 的专业处理
-    private fun cropBitmap(cropRect: Rect , bitmap: Bitmap): Bitmap{
+    fun cropBitmap(rectArea: RectArea, bitmap: Bitmap): Bitmap {
         try {
-            // 确保裁剪区域不超出 Bitmap 边界
-            val realX = cropRect.left.coerceIn(0, bitmap.width - 1)
-            val realY = cropRect.top.coerceIn(0, bitmap.height - 1)
-            val realW = cropRect.width().coerceAtMost(bitmap.width - realX)
-            val realH = cropRect.height().coerceAtMost(bitmap.height - realY)
-            return Bitmap.createBitmap(bitmap, realX, realY, realW, realH)
+            val bitmapWidth = bitmap.width
+            val bitmapHeight = bitmap.height
+
+            // 1. 将比例换算为真实像素
+            val left = (rectArea.x1 * bitmapWidth).toInt().coerceIn(0, bitmapWidth - 1)
+            val top = (rectArea.y1 * bitmapHeight).toInt().coerceIn(0, bitmapHeight - 1)
+            val right = (rectArea.x2 * bitmapWidth).toInt().coerceIn(left + 1, bitmapWidth)
+            val bottom = (rectArea.y2 * bitmapHeight).toInt().coerceIn(top + 1, bitmapHeight)
+
+            // 2. 计算宽度和高度
+            val width = right - left
+            val height = bottom - top
+
+            // 3. 执行裁剪
+            return Bitmap.createBitmap(bitmap, left, top, width, height)
         } catch (e: Exception) {
-            e.printStackTrace() // 防止坐标非法导致崩溃
+            Log.e("ScreenCapture", "裁剪失败，返回原图: ${e.message}")
             return bitmap
         }
     }

@@ -83,7 +83,6 @@ class FloatWindowService : Service() {
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent?.getParcelableExtra("SCREEN_CAPTURE_DATA", Intent::class.java)
         } else {
-            @Suppress("DEPRECATION")
             intent?.getParcelableExtra<Intent>("SCREEN_CAPTURE_DATA")
         }
         if (data != null) {
@@ -161,9 +160,10 @@ class FloatWindowService : Service() {
                 // 状态 1：还没运行 -> 点击开始
                 showCustomToast("▶️ 脚本启动")
                 val taskList = listOf("开始游戏","选角", "game")
-                 scriptExecutor.execute(taskList)
+                // scriptExecutor.execute(taskList)
                 // scriptExecutor.showText()
-                // scriptExecutor.test()
+                // scriptExecutor.showBitMap()
+                scriptExecutor.test()
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()
