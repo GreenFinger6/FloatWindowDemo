@@ -115,6 +115,8 @@ class ScreenCaptureManager(private val context: Context) {
 
     fun stopStreaming() {
         isStreaming = false
+        // 传入 null 代表移除该 Handler 关联的所有回调
+        handler.removeCallbacksAndMessages(null)
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.close()
