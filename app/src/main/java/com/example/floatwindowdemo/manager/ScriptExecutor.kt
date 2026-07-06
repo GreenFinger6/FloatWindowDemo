@@ -19,143 +19,124 @@ class ScriptExecutor(
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
     private val TAG = "ScriptExecutor"
-
-    // 创建一个协程作用域，绑定到主线程，才能更新UI
+    // 协程作用域，绑定到主线程，才能更新UI
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
 
 
     // 脚本运行状态参数
-    private var currentIndex = 0 //当前index索引
     private var retryCount = 0 //重试次数
     private var consecutiveCount = 0 // 观察到帧计数
     private val templateCache = mutableMapOf<String, Bitmap>() //缓存 Map，存放预加载的模板
     var isRunning = false // 开始状态标记
     var isPaused = false // 暂停状态标记
+    private var isProcessing = false // 全局的“锁”，防止逻辑重叠
 
-    // 配置参数
+    // 全局配置参数
     private val MAX_RETRY = 100 // 识别失败最大重复次数
     private val CLICK_CD = 1500L // 点击延迟，1500ms
     private val REQUIRED_STABILITY_COUNT = 3 // 重复识别到多少帧才点击，建议设为 3 次
 
-    fun execute(taskList: List<String>) {
+
+    /**
+     * 【模版方法】
+     *  封装了：启动检查、内存回收、协程启动、暂停挂起、异常捕获、流程解锁
+     */
+    private fun runStreamingTask(action: suspend (Bitmap) -> Unit) {
         if (isRunning) return
         isRunning = true
-        currentIndex = 0
-        retryCount = 0
-        consecutiveCount = 0
+        isProcessing = false // 初始化锁状态
 
-
-        // 在流开启后，使用 scope.launch 接管每一帧的逻辑
         screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            // 检查是否点击停止
-            if (!isRunning) {
+            // 1. 预检查：如果不运行或正在处理，直接销毁并跳过
+            if (!isRunning || isProcessing) {
+                bitmap.recycle()
                 onTaskComplete()
                 return@startStreaming
             }
             scope.launch {
                 try {
+                    isProcessing = true // 【上锁】
 
-                    // 如果处于暂停状态，就在这里循环等待，每 500ms 检查一次
+                    // 2. 暂停挂起检查
                     while (isPaused && isRunning) {
-                        delay(500L) // 挂起 500ms，不阻塞主线程，悬浮窗依然流畅
+                        delay(500L)
                     }
-
-                    // 如果在暂停期间脚本被彻底停止了，直接退出
                     if (!isRunning) return@launch
 
-                    // 1. 任务完成检查，逻辑终点
-                    if (currentIndex >= taskList.size) {
-                        onStatusUpdate("任务完成")
-                        stop()
-                        return@launch
-                    }
-
-                    val targetWord = taskList[currentIndex]
-
-                    // 2. 异步获取结果
-                    val location = withContext(Dispatchers.Default) {
-                        ocrManager.findTextLocationAsync(bitmap, targetWord)
-                    }
-
-                    // 3. 逻辑处理
-                    if (location != null) {
-                        consecutiveCount++ // 观察到目标，计数加1
-                        retryCount = 0 // 只要找到了，总重试/超时计数可以重置
-
-                        if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
-                            // 只有连续观察到指定次数，才认为UI已稳定，执行操作
-                            Log.d(TAG,"目标稳定，执行点击: $targetWord")
-
-                            AutomationService.instance?.click(
-                                location.x.toFloat(),
-                                location.y.toFloat()
-                            )
-
-                            currentIndex++ // 进入下一个任务
-                            consecutiveCount = 0 // 重置连续计数，为下一个任务做准备
-                            delay(CLICK_CD)
-                        }
-                    } else {
-                        // 这一帧没找到目标
-                        consecutiveCount = 0 // 连续中断，清零
-                        Log.d(TAG,"未找到: $targetWord")
-                        retryCount++
-                        if (retryCount >= MAX_RETRY) {
-                            Log.d(TAG,"脚本卡住了：找不着$targetWord")
-                            stop()
-                        }
-                    }
+                    // 3. 执行自定义逻辑
+                    action(bitmap)
                 } catch (e: Exception) {
-                    Log.e(TAG, "识别过程出错: ${e.message}")
+                    Log.e(TAG, "执行出错: ${e.message}")
                 } finally {
-                    // 这一帧处理完了，无论成功失败，立即回收内存
+                    // 4. 【收尾工作】无论逻辑如何，统一回收与解锁
+                    isProcessing = false // 【解锁】
                     bitmap.recycle()
-                    // 通知截取下一帧
                     onTaskComplete()
                 }
             }
         }
     }
 
-    fun showText(){
-        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            scope.launch {
-                try {
-                    // 1. 异步执行 OpenCV 或 OCR
-                    val text = withContext(Dispatchers.Default) {
-                        ocrManager.recognizeTextAsync(bitmap)
-                    }
-                    val cleanText = text.replace("\n", " ")
-                    Log.d(TAG, "📝 [常规识别] -> $cleanText")
-                } catch (e: Exception) {
-                    // 处理可能的异常，防止崩溃
-                    Log.e(TAG, "本帧处理出错: ${e.message}")
-                } finally {
-                    // 这一帧处理完了，无论成功失败，立即回收内存
-                    bitmap.recycle()
-                    // 通知截取下一帧
-                    onTaskComplete()
+    fun execute(taskList: List<String>) {
+        var currentIndex = 0 // 记录当前执行任务索引
+        consecutiveCount = 0
+
+        runStreamingTask { bitmap ->
+
+            // 逻辑终点
+            if (currentIndex >= taskList.size) {
+                onStatusUpdate("任务完成")
+                stop()
+                return@runStreamingTask // 相当于退出本次 action
+            }
+
+            val targetWord = taskList[currentIndex]
+            val location = withContext(Dispatchers.Default) {
+                ocrManager.findTextLocationAsync(bitmap, targetWord)
+            }
+
+            if (location != null) {
+                consecutiveCount++
+                if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
+                    // 只有连续观察到指定次数，才认为UI已稳定，执行操作
+                    Log.d(TAG,"目标稳定，执行点击: $targetWord")
+                    AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
+                    currentIndex++
+                    consecutiveCount = 0
+                    delay(CLICK_CD)
+                }
+            } else {
+                consecutiveCount = 0
+                retryCount++
+                if (retryCount >= MAX_RETRY) {
+                    Log.d(TAG,"重试次数过多，找不着$targetWord")
+                    stop()
                 }
             }
         }
     }
 
-    fun showBitMap(){
+    fun showAllText() {
+        runStreamingTask { bitmap ->
+            val text = withContext(Dispatchers.Default) {
+                ocrManager.recognizeTextAsync(bitmap)
+            }
+            Log.d(TAG, "📝 识别内容: ${text.replace("\n", " ")}")
+        }
+    }
+
+    fun findTargetTemplate(){
         preloadTemplates(listOf("button_retry"))
-        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            val targetWord = "button_retry"
-            val template = templateCache[targetWord] // 从缓存取，极快
-            // 【解决办法】进行空检查
+        val targetTemplate = "button_retry"
+        val template = templateCache[targetTemplate] // 从缓存取，极快
+        runStreamingTask { bitmap ->
+            // 【逻辑终点
             if (template == null) {
-                Log.e("OpenCV", "未能在缓存中找到模板: $targetWord")
-                onTaskComplete() // 记得通知流继续，否则会卡死
-                return@startStreaming // 结束本次回调
+                Log.e("OpenCV", "未能在缓存中找到模板: $targetTemplate")
+                return@runStreamingTask // 结束本次回调
             }
-            // 使用协程处理每一帧，避免卡顿悬浮窗拖拽
-            scope.launch {
-                try {
-                    // 1. 切换到 CPU 密集型线程池进行计算
+            // 1. 切换到 CPU 密集型线程池进行计算
 //                    val resultPoint = withContext(Dispatchers.Default) {
 //                        // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
 //                        OpencvUtil.findImage(bitmap, template, 0.9)
@@ -167,111 +148,68 @@ class ScriptExecutor(
 //                    } else {
 //                        Log.e("OpenCV", "测试匹配失败")
 //                    }
-                    // 测试保存图片
-                    saveDebugBitmap(bitmap)
-                } catch (e: Exception) {
-                    // 处理可能的异常，防止崩溃
-                    Log.e(TAG, "本帧处理出错: ${e.message}")
-                } finally {
-                    // 这一帧处理完了，无论成功失败，立即回收内存
-                    bitmap.recycle()
-                    // 通知截取下一帧
-                    onTaskComplete()
-                }
-            }
+            // 测试保存图片
+            saveDebugBitmap(bitmap)
         }
     }
 
-    // 拍卖行蹲价格
-    fun test() {
-        if (isRunning) return
-        isRunning = true
-        currentIndex = 0
+    /**
+     * 拍卖行蹲价格
+     */
+    fun buyGoods() {
         var testStep = 0 // 0: 准备点击商品, 1: 准备识别价格
         var lastPrice = -1L // 最后一次识别到的价格
+        var count = 0
 
-        // 在流开启后，使用 scope.launch 接管每一帧的逻辑
-        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            // 检查是否点击停止
-            if (!isRunning ) {
-                onTaskComplete()
-                return@startStreaming
+        runStreamingTask { bitmap ->
+            // 逻辑终点
+            if (count >= Int.MAX_VALUE) {
+                onStatusUpdate("测试完成")
+                stop()
+                return@runStreamingTask
             }
-            scope.launch {
-                try {
-                    // 如果处于暂停状态，就在这里循环等待，每 500ms 检查一次
-                    while (isPaused && isRunning) {
-                        delay(500L) // 挂起 500ms，不阻塞主线程，悬浮窗依然流畅
-                    }
 
-                    // 如果在暂停期间脚本被彻底停止了，直接退出
-                    if (!isRunning) return@launch
+            if (testStep == 0) {
+                // 步骤0：点击商品
+                AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang)
+                testStep = 1
+                delay(500L) // 等待界面弹出
+            } else {
+                // 步骤1：识别价格
+                val priceBitmap = screenCaptureManager.cropBitmap(GameConfig.Regions.MIN_PRICE, bitmap)
+                val rawText = withContext(Dispatchers.Default) {
+                    ocrManager.recognizeTextAsync(priceBitmap)
+                }
+                priceBitmap.recycle()
 
-                    // 任务完成检查，逻辑终点
-                    if (currentIndex >= MAX_RETRY) {
-                        onStatusUpdate("任务完成")
-                        stop()
-                        return@launch
-                    }
-                    if (testStep == 0) {
-                        // 在列表页点击商品
-                        AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang)
-                        testStep = 1 // 切换到识别阶段
+                // 使用正则从 String 中提取信息
+                val price = extractPrice(rawText)
+                val quantity = extractQuantity(rawText)
+                // 价格稳定，且出现多帧之后才确定
+                if (price > 0 && price == lastPrice) {
+                    consecutiveCount++
+                } else {
+                    lastPrice = price
+                    consecutiveCount = 0
+                }
+                if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
+                    // --- 价格已稳定，执行业务逻辑 ---
+                    Log.e(TAG,"当前价格: $price, 数量: $quantity")
 
-                        // 等 600ms，期间所有新进来的帧都会因为 isProcessing=true 被丢弃
-                        delay(500L)
+                    // 是否需要购买
 
-                    } else{
-                        // 查看价格
-                        val priceBitmap = screenCaptureManager.cropBitmap(GameConfig.Regions.MIN_PRICE, bitmap)
+                    // 操作完后，返回商品列表
+                    AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
 
-                        // 异步获取结果
-                        val rawText = withContext(Dispatchers.Default) {
-                            ocrManager.recognizeTextAsync(priceBitmap)
-                        }
-
-                        // 裁剪出的临时图片用完立即回收
-                        priceBitmap.recycle()
-
-                        // 使用正则从 String 中提取信息 (逻辑解耦)
-                        val price = extractPrice(rawText)
-                        val quantity = extractQuantity(rawText)
-
-                        // --- 价格稳定性校验逻辑 ---
-                        if (price > 0 && price == lastPrice) {
-                            consecutiveCount++
-                        } else {
-                            lastPrice = price
-                            consecutiveCount = 0
-                        }
-
-                        if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
-                            // --- 价格已稳定，执行业务逻辑 ---
-                            Log.e(TAG,"当前价格: $price, 数量: $quantity")
-
-                            // 是否需要购买
-
-                            // 操作完后，返回商品列表
-                            AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
-
-                            // 重置所有状态，进入下一个循环
-                            testStep = 0 // 切换到点击阶段
-                            lastPrice = -1L
-                            consecutiveCount = 0
-                            currentIndex++ //进入下次任务
-                            delay(500L) // 等待返回列表的动画
-                        } else {
-                            // 价格未稳定，继续留在本步骤识别下一帧 ---
-                            delay(100L) // 给一点微小的间歇，防止 OCR 跑得太快占满 CPU
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "识别过程出错: ${e.message}")
-                } finally {
-                    // 这一帧处理完了，无论成功失败，立即回收内存
-                    bitmap.recycle()
-                    // 通知截取下一帧
-                    onTaskComplete()
+                    // 重置步骤，进入下一次循环
+                    count++
+                    testStep = 0
+                    lastPrice = -1L
+                    consecutiveCount = 0
+                    delay(500L)
+                } else {
+                    // 价格未稳定，继续留在本步骤识别下一帧 ---
+                    delay(100L) // 给一点微小的间歇，防止 OCR 跑得太快占满 CPU
                 }
             }
         }

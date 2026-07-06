@@ -163,7 +163,7 @@ class FloatWindowService : Service() {
                 // scriptExecutor.execute(taskList)
                 // scriptExecutor.showText()
                 // scriptExecutor.showBitMap()
-                scriptExecutor.test()
+                scriptExecutor.buyGoods()
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()
