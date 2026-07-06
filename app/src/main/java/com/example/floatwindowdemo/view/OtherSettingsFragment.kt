@@ -52,8 +52,30 @@ class OtherSettingsFragment : Fragment() {
         binding.sliderAlpha.addOnChangeListener { slider, value, fromUser ->
             // 这里 value 是 0.0 到 1.0
         }
+
         // 检查更新按钮绑定监听器
         initUpdateLogic()
+
+        // 初始化回显（从本地读取已保存的配置）
+        loadSettings()
+    }
+
+    /**
+     * 加载本地保存的配置
+     */
+    fun loadSettings() {
+        // todo
+        // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
+        if(_binding == null) return
+    }
+
+    /**
+     * 读取 UI 上的值并保存到本地
+     */
+    fun saveSettings() {
+        // todo
+        // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
+        if(_binding == null) return
     }
 
     override fun onDestroyView() {

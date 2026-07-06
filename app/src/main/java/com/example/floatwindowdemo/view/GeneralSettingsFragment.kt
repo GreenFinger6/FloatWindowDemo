@@ -8,6 +8,8 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import androidx.fragment.app.Fragment
 import com.example.floatwindowdemo.databinding.FragmentGeneralSettingsBinding
+import com.example.floatwindowdemo.utils.AuctionConfig
+import com.example.floatwindowdemo.utils.ConfigManager
 
 class GeneralSettingsFragment : Fragment() {
     private var _binding: FragmentGeneralSettingsBinding? = null
@@ -38,6 +40,32 @@ class GeneralSettingsFragment : Fragment() {
         binding.sliderAlpha.addOnChangeListener { slider, value, fromUser ->
             // 这里 value 是 0.0 到 1.0
         }
+
+        // 初始化回显（从本地读取已保存的配置）
+        loadSettings()
+    }
+
+    /**
+     * 加载本地保存的配置
+     */
+    fun loadSettings() {
+        // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
+        if(_binding == null) return
+        // 拍卖行配置
+        val auctionConfig = ConfigManager.getAuctionConfig(requireContext())
+        binding.editMaxPrice.setText(auctionConfig.maxPrice.toString())
+        binding.editMaxQuantity.setText(auctionConfig.maxQuantity.toString())
+    }
+
+    /**
+     * 读取 UI 上的值并保存到本地
+     */
+    fun saveSettings() {
+        // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
+        if(_binding == null) return
+        val price = binding.editMaxPrice.text.toString().toLongOrNull() ?: 0L
+        val quantity = binding.editMaxQuantity.text.toString().toLongOrNull() ?: 0L
+        ConfigManager.saveAuctionConfig(requireContext(), AuctionConfig(price, quantity))
     }
 
     override fun onDestroyView() {

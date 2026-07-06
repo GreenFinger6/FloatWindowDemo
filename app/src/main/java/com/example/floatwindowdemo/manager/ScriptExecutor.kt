@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
+import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.GameConfig
 import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.extractPrice
@@ -34,8 +35,11 @@ class ScriptExecutor(
 
     // 全局配置参数
     private val MAX_RETRY = 100 // 识别失败最大重复次数
-    private val CLICK_CD = 1500L // 点击延迟，1500ms
+    private val CLICK_CD = 1500L // 点击延迟，ms
+
+    private val UI_CD = 500L // UI延迟，ms
     private val REQUIRED_STABILITY_COUNT = 3 // 重复识别到多少帧才点击，建议设为 3 次
+
 
 
     /**
@@ -154,17 +158,20 @@ class ScriptExecutor(
     }
 
     /**
-     * 拍卖行蹲价格
+     * 开始拍卖行抢拍
      */
-    fun buyGoods() {
+    fun startAuction() {
+        retryCount = 0; // 连续未识别到的次数
         var testStep = 0 // 0: 准备点击商品, 1: 准备识别价格
         var lastPrice = -1L // 最后一次识别到的价格
-        var count = 0
-
+        var count = 0 // 记录已购买数量
+        val config = ConfigManager.getAuctionConfig(context)
+        val targetPrice = config.maxPrice
+        val targetQty = config.maxQuantity
         runStreamingTask { bitmap ->
-            // 逻辑终点
-            if (count >= Int.MAX_VALUE) {
-                onStatusUpdate("测试完成")
+            // 逻辑终点: 购买数量达到预期
+            if (targetQty != 0L && count >= targetQty) {
+                onStatusUpdate("任务完成")
                 stop()
                 return@runStreamingTask
             }
@@ -173,7 +180,7 @@ class ScriptExecutor(
                 // 步骤0：点击商品
                 AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang)
                 testStep = 1
-                delay(500L) // 等待界面弹出
+                delay(UI_CD) // 等待界面弹出
             } else {
                 // 步骤1：识别价格
                 val priceBitmap = screenCaptureManager.cropBitmap(GameConfig.Regions.MIN_PRICE, bitmap)
@@ -191,25 +198,37 @@ class ScriptExecutor(
                 } else {
                     lastPrice = price
                     consecutiveCount = 0
+                    retryCount++
                 }
+                // 连续识别到相同价格
                 if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
                     // --- 价格已稳定，执行业务逻辑 ---
                     Log.e(TAG,"当前价格: $price, 数量: $quantity")
 
                     // 是否需要购买
+                    val isPriceOk = targetPrice == 0L || price <= targetPrice
+                    val isQtyOk = targetQty == 0L || quantity <= targetQty
+                    if (isPriceOk && isQtyOk) {
+                        Log.e(TAG,"尝试购买: $price, 数量: $quantity")
+                        // 执行点击购买
+                        count++
+                    }
 
                     // 操作完后，返回商品列表
                     AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
+                    delay(UI_CD)
 
                     // 重置步骤，进入下一次循环
-                    count++
                     testStep = 0
                     lastPrice = -1L
                     consecutiveCount = 0
-                    delay(500L)
-                } else {
-                    // 价格未稳定，继续留在本步骤识别下一帧 ---
-                    delay(100L) // 给一点微小的间歇，防止 OCR 跑得太快占满 CPU
+                    retryCount = 0
+                }else if (retryCount >= REQUIRED_STABILITY_COUNT) {
+                    // 此时可能是商品没货，需要返回刷新
+                    AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
+                    delay(UI_CD)
+                    testStep = 0
+                    retryCount = 0
                 }
             }
         }

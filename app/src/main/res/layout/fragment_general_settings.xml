@@ -19,6 +19,63 @@
             android:text="⚙️ 通用设置"
             android:textSize="20sp"
             android:textStyle="bold" />
+        <!-- 拍卖行设置分组标题 -->
+        <TextView
+            android:layout_width="wrap_content"            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="⚖️ 拍卖行抢拍设置"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/purple_500" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:baselineAligned="false">
+
+            <!-- 目标价格输入 -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:hint="最高购买价">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_max_price"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 目标数量输入 -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="最大购买数">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_max_quantity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="* 设置为 0 表示不限制价格和数量"
+            android:textColor="#999999"
+            android:textSize="12sp" />
 
         <!-- 开关控件 -->
         <androidx.appcompat.widget.SwitchCompat

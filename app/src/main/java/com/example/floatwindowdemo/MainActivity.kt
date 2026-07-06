@@ -26,10 +26,11 @@ import kotlin.text.equals
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
     // 权限请求码
     private val REQUEST_FLOAT_WINDOW_PERMISSION = 1001
-
+    // 页签实例
+    private val generalSettingsFragment = GeneralSettingsFragment()
+    private val otherSettingsFragment = OtherSettingsFragment()
     // 退出广播接收器
     private val exitReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         // 设置 androidx . viewpager2 . widget . ViewPager2 的适配器
         val adapter = SettingPagerAdapter(this)
         binding.viewPager.adapter = adapter
+        binding.viewPager.offscreenPageLimit = 1 // 预加载并保留相邻的 1 个页面
 
         // 将 TabLayout 与 ViewPager2 关联
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
@@ -76,11 +78,16 @@ class MainActivity : AppCompatActivity() {
             }
         }.attach()
 
+        // 保存按钮逻辑
+        binding.btnSaveConfig.setOnClickListener {
+            generalSettingsFragment.saveSettings()
+            otherSettingsFragment.saveSettings()
+            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show()
+        }
         // 开启悬浮窗按钮
         binding.btnStartFloat.setOnClickListener {
             handleStartFlow()
         }
-
         // 关闭悬浮窗按钮
         binding.btnStopFloat.setOnClickListener {
             stopFloatWindowService()
@@ -103,8 +110,8 @@ class MainActivity : AppCompatActivity() {
         override fun getItemCount(): Int = 2 // 页签数量
         override fun createFragment(position: Int): Fragment {
             return when (position) {
-                0 -> GeneralSettingsFragment() // 你定义的通用设置类
-                else -> OtherSettingsFragment() // 其他设置
+                0 -> generalSettingsFragment // 通用设置类
+                else -> otherSettingsFragment// 其他设置
             }
         }
     }
