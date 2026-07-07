@@ -210,7 +210,12 @@ class ScriptExecutor(
                     val isQtyOk = targetQty == 0L || quantity <= targetQty
                     if (isPriceOk && isQtyOk) {
                         Log.e(TAG,"尝试购买: $price, 数量: $quantity")
-                        // 执行点击购买
+                        // todo 执行点击购买
+                        
+                        // 喵提醒
+                        val miaoCode = ConfigManager.getMiaoCode(context)
+                        if (miaoCode != null) GameController.postMiao(miaoCode, "目标价格出现")
+
                         count++
                     }
 
