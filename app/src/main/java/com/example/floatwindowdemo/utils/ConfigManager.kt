@@ -9,6 +9,7 @@ object ConfigManager {
     // Key 常量定义
     private const val KEY_MAX_PRICE = "max_price"
     private const val KEY_MAX_QUANTITY = "max_quantity"
+    private const val KEY_MIAO_CODE = "miao_code"
 
 
     private fun getPrefs(context: Context): SharedPreferences {
@@ -23,10 +24,23 @@ object ConfigManager {
             apply()
         }
     }
-    fun getAuctionConfig(context: Context):AuctionConfig{
+    fun getAuctionConfig(context: Context) : AuctionConfig{
         val maxPrice = getPrefs(context).getLong(KEY_MAX_PRICE, 0L)
         val maxQuantity = getPrefs(context).getLong(KEY_MAX_QUANTITY, 0L)
         return AuctionConfig(maxPrice, maxQuantity)
+    }
+
+    // --- 喵提醒 ---
+    fun saveMiaoCode(context: Context, id: String) {
+        getPrefs(context).edit().apply {
+            putString(KEY_MIAO_CODE, id)
+            apply()
+        }
+    }
+
+    fun getMiaoCode(context: Context) : String?{
+        val id = getPrefs(context).getString(KEY_MIAO_CODE, "")
+        return id
     }
 }
 

@@ -8,9 +8,12 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
+import androidx.compose.ui.semantics.text
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.floatwindowdemo.databinding.FragmentOtherSettingsBinding
+import com.example.floatwindowdemo.manager.GameController
+import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.NetworkUtil
 import com.example.floatwindowdemo.utils.installApk
 import kotlinx.coroutines.launch
@@ -53,6 +56,9 @@ class OtherSettingsFragment : Fragment() {
             // 这里 value 是 0.0 到 1.0
         }
 
+        // 测试发送按钮绑定监听器
+        initSendPostLogic()
+
         // 检查更新按钮绑定监听器
         initUpdateLogic()
 
@@ -64,23 +70,63 @@ class OtherSettingsFragment : Fragment() {
      * 加载本地保存的配置
      */
     fun loadSettings() {
-        // todo
         // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
         if(_binding == null) return
+
+        // 喵提醒码
+        val savedId = ConfigManager.getMiaoCode(requireContext())
+        binding.editMiaoCode.setText(savedId)
     }
 
     /**
      * 读取 UI 上的值并保存到本地
      */
     fun saveSettings() {
-        // todo
         // 此时直接返回，不执行后续 UI 读取逻辑，避免崩溃
         if(_binding == null) return
+
+        // 喵提醒码
+        val miaoCode = binding.editMiaoCode.text.toString().trim()
+        ConfigManager.saveMiaoCode(requireContext(), miaoCode)
+
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    // 测试发送按钮点击逻辑
+    private fun initSendPostLogic() {
+        binding.btnTestPost.setOnClickListener {
+            val miaoCode = binding.editMiaoCode.text.toString().trim()
+
+            if (miaoCode.isEmpty()) {
+                Toast.makeText(context, "请先输入用户 ID", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // 使用协程发送网络请求
+            lifecycleScope.launch {
+                try {
+                    // 显示正在发送的状态
+                    binding.btnTestPost.isEnabled = false
+                    binding.btnTestPost.text = "发送中..."
+                    val isSuccess = GameController.postMiao(miaoCode, "这是一条测试消息")
+
+                    // 根据结果显示 Toast
+                    if (isSuccess) {
+                        Toast.makeText(context, "发送成功！", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "发送失败", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "发送失败", Toast.LENGTH_SHORT).show()
+                } finally {
+                    binding.btnTestPost.isEnabled = true
+                    binding.btnTestPost.text = "测试发送"
+                }
+            }
+        }
     }
 
     // 检查更新按钮点击逻辑

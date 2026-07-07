@@ -130,11 +130,42 @@
                 android:layout_centerInParent="true" />
         </RelativeLayout>
 
+        <!-- 用户 ID 测试 POST区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="喵提醒码">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_miao_code"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_test_post"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="测试发送" />
+        </LinearLayout>
+
         <!-- 检查更新 -->
         <RelativeLayout
             android:id="@+id/layout_check_update"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="60dp"
             android:layout_marginTop="16dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"

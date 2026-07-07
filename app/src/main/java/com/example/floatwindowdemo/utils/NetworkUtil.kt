@@ -116,19 +116,26 @@ object NetworkUtil {
         }
     }
 
-    /**
-     * 3. 发送通用 POST 消息
+    /*** 3. 发送通用 POST 消息 (修改后)
+     * @return Boolean 返回发送是否成功
      */
-    suspend fun sendStatusPost(url: String, message: String) {
+    suspend fun sendPost(url: String, jsonParams: JSONObject): Boolean {
+        Log.d(TAG, "POST: $url, JSON: $jsonParams")
         val request = Request.Builder()
             .url(url)
-            .post(message.toRequestBody(JSON))
+            .post(jsonParams.toString().toRequestBody(JSON))
             .build()
 
-        // 这种不需要返回值的，parser 直接返回 Unit
-        executeRequest(request) { /* 仅执行，不需解析内容 */ }
-    }
+        // executeRequest 成功会返回 parser 的结果（这里是 true）
+        // 如果失败（404、500、网络断开），executeRequest 会返回 null
+        val result = executeRequest(request) {
+            // 这里我们返回一个 true 代表进入了 isSuccessful 分支
+            true
+        }
 
+        // 如果 result 是 null，说明失败了，返回 false
+        return result ?: false
+    }
 
     /**
      * 下载 APK 文件
