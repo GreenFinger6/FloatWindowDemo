@@ -9,6 +9,7 @@ import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.GameConfig
 import com.example.floatwindowdemo.utils.OpencvUtil
+import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.extractPrice
 import com.example.floatwindowdemo.utils.extractQuantity
 import kotlinx.coroutines.*
@@ -211,7 +212,7 @@ class ScriptExecutor(
                     if (isPriceOk && isQtyOk) {
                         Log.e(TAG,"尝试购买: $price, 数量: $quantity")
                         // todo 执行点击购买
-                        
+
                         // 喵提醒
                         val miaoCode = ConfigManager.getMiaoCode(context)
                         if (miaoCode != null) GameController.postMiao(miaoCode, "目标价格出现")
@@ -235,6 +236,30 @@ class ScriptExecutor(
                     testStep = 0
                     retryCount = 0
                 }
+            }
+        }
+    }
+
+    fun runYoloTask() {
+        val initSuccess = YoloUtil.initModel(context.assets)
+        Log.d(TAG, "YOLO模型初始化: $initSuccess")
+
+        if (!initSuccess){
+            stop()
+            return
+        }
+
+        runStreamingTask { bitmap ->
+            // 1. 调用 YOLO 识别
+            // 建议在 Dispatchers.Default 中运行，因为 C++ 计算不占用协程挂起，但会占用 CPU
+            val results = withContext(Dispatchers.Default) {
+                YoloUtil.detect(bitmap)
+            }
+
+            // 2. 处理结果
+            Log.d("YOLO", "识别到目标数量: ${results?.size}")
+            results?.forEachIndexed { index, res ->
+                Log.d("YOLO", "目标[$index]: 类别=${YoloUtil.getLabelName(res.label)}, 置信度=${res.score}, 坐标=(${res.x}, ${res.y})")
             }
         }
     }
@@ -314,6 +339,7 @@ class ScriptExecutor(
         handler.removeCallbacksAndMessages(null)
         // 取消所有正在运行的协程任务
         scope.coroutineContext.cancelChildren()
+        YoloUtil.release() // 脚本停止时清理 C++ 层模型缓存
         releaseTemplates()
     }
 }

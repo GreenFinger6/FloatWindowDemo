@@ -10,9 +10,12 @@ object GameConfig {
         val START = Pair(540f, 1200f)
         val RETRY = Pair(300f, 800f)
         val CLOSE = Pair(1000f, 50f)
-        // 拍卖行第一个物品位置
-        val PaiMaiHang = Pair(614f, 166f)
-        val PaiMaiHang2 = Pair(66f, 415f)
+
+        // 拍卖行抢拍相关按钮
+        val PaiMaiHang = Pair(0.4964f, 0.2306f) // 拍卖行第一个物品位置
+        val PaiMaiHang2 = Pair(0.0534f, 0.5764f) // 返回拍卖行
+        val PaiMaiHang3 = Pair(66f, 415f) // 购买
+        val PaiMaiHang4 = Pair(66f, 415f) // 购买确认
     }
 
     // 2. 裁剪区域 (x1, y1, x2, y2)

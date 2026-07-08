@@ -25,6 +25,21 @@ android {
             // arm64-v8a（现代 64 位手机）、armeabi-v7a（旧款 32 位手机）、x86 和 x86_64（主要是模拟器）
             abiFilters.add("arm64-v8a")
         }
+
+        // 指定 CMake 参数
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++11 -frtti -fexceptions")
+                arguments("-DANDROID_STL=c++_shared")
+            }
+        }
+    }
+
+    // 指定 CMakeLists.txt 路径
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/jni/CMakeLists.txt")
+        }
     }
 
     buildTypes {
