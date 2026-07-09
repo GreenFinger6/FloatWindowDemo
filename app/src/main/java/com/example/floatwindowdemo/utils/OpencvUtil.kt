@@ -1,7 +1,10 @@
 package com.example.floatwindowdemo.utils
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -12,6 +15,8 @@ import org.opencv.imgproc.Imgproc
 
 object OpencvUtil {
     private var isInitialized = false
+    private const val TAG = "OpencvUtil"
+    val templateCache = mutableMapOf<String, Bitmap>() //缓存 Map，存放预加载的模板
 
     private fun checkInit(): Boolean {
         if (!isInitialized) {
@@ -31,7 +36,7 @@ object OpencvUtil {
 
         // 每次调用前先检查
         if (!checkInit()) {
-            Log.e("OpencvUtil", "OpenCV 未初始化")
+            Log.e(TAG, "OpenCV 未初始化")
             return null
         }
 
@@ -61,7 +66,7 @@ object OpencvUtil {
             val maxVal = mmr.maxVal // 相似度分数
             val maxLoc = mmr.maxLoc // 匹配到的左上角坐标
 
-            Log.d("OpenCVHelper", "匹配得分: $maxVal")
+            Log.d(TAG, "匹配得分: $maxVal")
 
             // 6. 释放 Mat 内存（非常重要，防止内存泄漏）
             result.release()
@@ -74,11 +79,71 @@ object OpencvUtil {
                 )
             }
         } catch (e: Exception) {
-            Log.e("OpenCVHelper", "匹配出错: ${e.message}")
+            Log.e(TAG, "匹配出错: ${e.message}")
         } finally {
             srcMat.release()
             tempMat.release()
         }
         return null
+    }
+
+    /**
+     * 从 Assets 文件夹读取图片并缓存
+     * @param taskList 图片路径list
+     */
+     fun preloadTemplates(context: Context, taskList: List<String>) {
+        // 先手动释放内存，再清空，最后重新加载
+        releaseTemplates()
+        taskList.forEach { taskName ->
+            // 假设图片名和任务名一致
+            val fileName = "templates/$taskName.png"
+            val bitmap = loadBitmapFromAssets(context, fileName)
+            if (bitmap != null) {
+                templateCache[taskName] = bitmap
+            }
+        }
+    }
+
+    /**
+     * 从 Assets 文件夹读取图片并转换为 Bitmap
+     * @param fileName 相对于 assets目录的路径，例如 "templates/button_start.png"
+     */
+    fun loadBitmapFromAssets(context: Context, fileName: String): Bitmap? {
+        return try {
+            context.assets.open(fileName).use { inputStream ->
+                android.graphics.BitmapFactory.decodeStream(inputStream)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "无法读取 Assets 图片: $fileName, 错误: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * 保存bitmap图片到应用缓存路径
+     * @param bitmap 图片
+     */
+    suspend fun saveDebugBitmap(context: Context, bitmap: Bitmap) {
+        // 切换到 IO 线程并“挂起”等待
+        withContext(Dispatchers.IO) {
+            try {
+                // data -> data -> com.example.floatwindowdemo -> cache -> debug_frame.png。
+                val file = java.io.File(context.cacheDir, "debug_frame.png")
+                java.io.FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                Log.d(TAG, "调试图片已保存至: ${file.absolutePath}")
+            } catch (e: Exception) {
+                Log.e(TAG, "保存图片失败: ${e.message}")
+            }
+        }
+    }
+
+    fun releaseTemplates() {
+        // 1. 遍历 Map 中所有的 Bitmap 值，逐个调用 recycle() 释放 Native 内存
+        templateCache.values.forEach { it.recycle() }
+
+        // 2. 清空 Map，断开 Java 对象引用，让 Java GC 可以回收包装对象
+        templateCache.clear()
     }
 }

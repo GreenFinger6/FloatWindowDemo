@@ -8,6 +8,7 @@ import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.GameConfig
+import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.extractPrice
 import com.example.floatwindowdemo.utils.extractQuantity
@@ -28,7 +29,6 @@ class ScriptExecutor(
     // 脚本运行状态参数
     private var retryCount = 0 //重试次数
     private var consecutiveCount = 0 // 观察到帧计数
-    private val templateCache = mutableMapOf<String, Bitmap>() //缓存 Map，存放预加载的模板
     var isRunning = false // 开始状态标记
     var isPaused = false // 暂停状态标记
     private var isProcessing = false // 全局的“锁”，防止逻辑重叠
@@ -130,30 +130,11 @@ class ScriptExecutor(
         }
     }
 
-    fun findTargetTemplate(){
-        preloadTemplates(listOf("button_retry"))
-        val targetTemplate = "button_retry"
-        val template = templateCache[targetTemplate] // 从缓存取，极快
+    fun saveScreen(){
         runStreamingTask { bitmap ->
-            // 【逻辑终点
-            if (template == null) {
-                Log.e("OpenCV", "未能在缓存中找到模板: $targetTemplate")
-                return@runStreamingTask // 结束本次回调
-            }
-            // 1. 切换到 CPU 密集型线程池进行计算
-//                    val resultPoint = withContext(Dispatchers.Default) {
-//                        // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
-//                        OpencvUtil.findImage(bitmap, template, 0.9)
-//                    }
-//                    // 2. 计算完成后，回到主线程处理结果（launch 默认在 Main）
-//                    if (resultPoint != null) {
-//                        Log.d("OpenCV", "测试匹配成功！中心坐标: x=${resultPoint.x}, y=${resultPoint.y}")
-//                        AutomationService.instance?.click(resultPoint.x, resultPoint.y)
-//                    } else {
-//                        Log.e("OpenCV", "测试匹配失败")
-//                    }
-            // 测试保存图片
-            saveDebugBitmap(bitmap)
+            // 保存图片
+            OpencvUtil.saveDebugBitmap(context, bitmap)
+            stop()
         }
     }
 
@@ -264,67 +245,6 @@ class ScriptExecutor(
     }
 
     /**
-     * 保存bitmap图片到应用缓存路径
-     * @param bitmap 图片
-     */
-    private suspend fun saveDebugBitmap(bitmap: Bitmap) {
-        // 切换到 IO 线程并“挂起”等待
-        withContext(Dispatchers.IO) {
-            try {
-                // data -> data -> com.example.floatwindowdemo -> cache -> debug_frame.png。
-                val file = java.io.File(context.cacheDir, "debug_frame.png")
-                java.io.FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
-                Log.d(TAG, "调试图片已保存至: ${file.absolutePath}")
-            } catch (e: Exception) {
-                Log.e(TAG, "保存图片失败: ${e.message}")
-            }
-        }
-    }
-
-
-    /**
-     * 从 Assets 文件夹读取图片并缓存
-     * @param taskList 图片路径list
-     */
-    private fun preloadTemplates(taskList: List<String>) {
-        // 先手动释放内存，再清空，最后重新加载
-        releaseTemplates()
-        taskList.forEach { taskName ->
-            // 假设图片名和任务名一致
-            val fileName = "templates/$taskName.png"
-            val bitmap = loadBitmapFromAssets(context, fileName)
-            if (bitmap != null) {
-                templateCache[taskName] = bitmap
-            }
-        }
-    }
-
-    /**
-     * 从 Assets 文件夹读取图片并转换为 Bitmap
-     * @param fileName 相对于 assets目录的路径，例如 "templates/button_start.png"
-     */
-    fun loadBitmapFromAssets(context: Context, fileName: String): Bitmap? {
-        return try {
-            context.assets.open(fileName).use { inputStream ->
-                android.graphics.BitmapFactory.decodeStream(inputStream)
-            }
-        } catch (e: Exception) {
-            Log.e("OpencvUtil", "无法读取 Assets 图片: $fileName, 错误: ${e.message}")
-            null
-        }
-    }
-
-    fun releaseTemplates() {
-        // 1. 遍历 Map 中所有的 Bitmap 值，逐个调用 recycle() 释放 Native 内存
-        templateCache.values.forEach { it.recycle() }
-
-        // 2. 清空 Map，断开 Java 对象引用，让 Java GC 可以回收包装对象
-        templateCache.clear()
-    }
-
-    /**
      * 切换暂停/恢复状态
      */
     fun togglePause() {
@@ -339,6 +259,6 @@ class ScriptExecutor(
         // 取消所有正在运行的协程任务
         scope.coroutineContext.cancelChildren()
         YoloUtil.release() // 脚本停止时清理 C++ 层模型缓存
-        releaseTemplates()
+        OpencvUtil.releaseTemplates() // 释放模版缓存
     }
 }
