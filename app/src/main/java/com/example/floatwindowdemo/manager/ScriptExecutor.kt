@@ -8,7 +8,6 @@ import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.GameConfig
-import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.extractPrice
 import com.example.floatwindowdemo.utils.extractQuantity
@@ -259,7 +258,7 @@ class ScriptExecutor(
             // 2. 处理结果
             Log.d("YOLO", "识别到目标数量: ${results?.size}")
             results?.forEachIndexed { index, res ->
-                Log.d("YOLO", "目标[$index]: 类别=${YoloUtil.getLabelName(res.label)}, 置信度=${res.score}, 坐标=(${res.x}, ${res.y})")
+                Log.d("YOLO", "目标[$index]: 类别=${YoloUtil.getLabelName(res.label)}, 置信度=${res.prob}, 坐标=(${res.centerX}, ${res.centerY})")
             }
         }
     }

@@ -38,8 +38,13 @@ object YoloUtil {
 data class DetectionResult(
     val x: Float,
     val y: Float,
-    val width: Float,
-    val height: Float,
+    val w: Float,
+    val h: Float,
     val label: Int,
-    val score: Float
-)
+    val prob: Float
+){
+    // 自动计算中心点 X
+    val centerX: Float get() = x + w / 2f
+    // 自动计算中心点 Y
+    val centerY: Float get() = y + h / 2f
+}
