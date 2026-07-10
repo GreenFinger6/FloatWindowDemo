@@ -16,7 +16,7 @@
         android:orientation="vertical"
         android:padding="8dp">
 
-        <!-- 标题栏：开关 + 名称 + 删除 -->
+        <!-- 标题栏：开关 + 名称-->
         <RelativeLayout
             android:id="@+id/layout_header"
             android:layout_width="match_parent"
@@ -52,17 +52,6 @@
                 android:textColor="@color/purple_500"
                 android:textSize="14sp"
                 android:textStyle="bold" />
-
-            <!-- 3. 删除按钮 -->
-            <ImageButton
-                android:id="@+id/btn_delete_role"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_delete"
-                app:tint="#FF5252" />
         </RelativeLayout>
 
         <LinearLayout
@@ -81,7 +70,7 @@
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:columnCount="2"
+                android:columnCount="4"
                 android:padding="8dp">
 
                 <CheckBox

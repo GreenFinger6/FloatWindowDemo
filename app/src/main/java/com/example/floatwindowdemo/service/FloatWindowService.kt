@@ -25,6 +25,7 @@ import com.example.floatwindowdemo.databinding.LayoutToastBinding
 import com.example.floatwindowdemo.manager.OcrManager
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
 import com.example.floatwindowdemo.manager.ScriptExecutor
+import com.example.floatwindowdemo.utils.ConfigManager
 
 class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
@@ -157,13 +158,24 @@ class FloatWindowService : Service() {
 
         binding.btnStartScript.setOnClickListener {
             if (!scriptExecutor.isRunning) {
-                // 状态 1：还没运行 -> 点击开始
+                // 状态：还没运行 -> 点击开始
                 showCustomToast("▶️ 脚本启动")
+                // 从本地存储读取当前选中的任务索引
+                val taskIndex = ConfigManager.getMainTask(this)
+                when (taskIndex) {
+                    0 -> {
+                        // 拍卖行抢拍
+                        scriptExecutor.startAuction()
+                    }
+                    1 -> {
+                        // 调用多角色任务方法
+                        scriptExecutor.runYoloTask()
+                    }
+                }
                 val taskList = listOf("开始游戏","选角", "game")
                 // scriptExecutor.execute(taskList)
                 // scriptExecutor.showText()
                 // scriptExecutor.showBitMap()
-                scriptExecutor.runYoloTask()
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()

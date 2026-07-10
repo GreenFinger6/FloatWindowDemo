@@ -12,7 +12,6 @@ object ConfigManager {
     private const val KEY_MAX_QUANTITY = "max_quantity" // 拍卖行最多数量
     private const val KEY_MIAO_CODE = "miao_code" //喵提醒码
     private const val KEY_MAIN_TASK = "main_task" // 当前任务
-    private const val KEY_ROLE_COUNT = "role_count" //角色数量
     private const val KEY_ROLE_DATA = "role_data" // 存放 JSON 字符串
 
     private fun getPrefs(context: Context): SharedPreferences {
@@ -24,12 +23,6 @@ object ConfigManager {
         getPrefs(context).edit { putInt(KEY_MAIN_TASK, index) }
     }
     fun getMainTask(context: Context): Int = getPrefs(context).getInt(KEY_MAIN_TASK, 0)
-
-    // --- 角色数量 ---
-    fun saveRoleCount(context: Context, count: Int) {
-        getPrefs(context).edit { putInt(KEY_ROLE_COUNT, count) }
-    }
-    fun getRoleCount(context: Context): Int = getPrefs(context).getInt(KEY_ROLE_COUNT, 0)
 
     // --- 角色详情数据 (JSON字符串) ---
     fun saveRoleDataJson(context: Context, json: String) {

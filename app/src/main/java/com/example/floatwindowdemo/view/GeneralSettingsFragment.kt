@@ -171,12 +171,6 @@ class GeneralSettingsFragment : Fragment() {
             itemBinding.tvRoleName.alpha = if (isChecked) 1.0f else 0.5f
         }
 
-        // 4. 删除按钮 (针对批量生成模式，可保留用于微调)
-        itemBinding.btnDeleteRole.setOnClickListener {
-            container.removeView(itemBinding.root)
-            if (expandedView == itemBinding.root) expandedView = null
-        }
-
         container.addView(itemBinding.root)
     }
 
