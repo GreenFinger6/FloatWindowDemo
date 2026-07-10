@@ -19,173 +19,150 @@
             android:text="⚙️ 通用设置"
             android:textSize="20sp"
             android:textStyle="bold" />
-        <!-- 拍卖行设置分组标题 -->
-        <TextView
-            android:layout_width="wrap_content"            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="⚖️ 拍卖行抢拍设置"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/purple_500" />
+        <!-- 在通用设置标题下方插入 -->
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:baselineAligned="false">
-
-            <!-- 目标价格输入 -->
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:hint="最高购买价">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_max_price"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:text="0" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- 目标数量输入 -->
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="最大购买数">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_max_quantity"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:text="0" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="* 设置为 0 表示不限制价格和数量"
-            android:textColor="#999999"
-            android:textSize="12sp" />
-
-        <!-- 开关控件 -->
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switch1"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="设置项 1" />
-
-        <!-- 复选框-->
-        <androidx.appcompat.widget.AppCompatCheckBox
-            android:id="@+id/checkbox_auto_start"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="开机自启动脚本"
-            android:textSize="16sp" />
-
-        <!-- 下拉框容器 -->
+        <!-- 1. 主任务类型选择 -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="脚本运行速度">
+            android:hint="当前执行任务">
 
             <AutoCompleteTextView
-                android:id="@+id/spinner_speed"
+                android:id="@+id/spinner_main_task"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="none"
-                android:text="正常" />
-            <!-- 注意：此处的列表内容需要在 Kotlin 代码中通过 Adapter 设置 -->
+                android:text="请选择任务" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 滑块 -->
+        <!-- ====================================================== -->
+        <!-- 2. 拍卖行抢拍配置组 (包裹在一个 LinearLayout 中方便控制显隐) -->
+        <!-- ====================================================== -->
         <LinearLayout
+            android:id="@+id/group_auction_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="16dp">
+            android:visibility="gone"> <!-- 默认隐藏 -->
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="悬浮窗不透明度" />
+                android:layout_marginTop="24dp"
+                android:text="⚖️ 拍卖行抢拍配置"
+                android:textStyle="bold"
+                android:textColor="@color/purple_500" />
 
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_alpha"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="0.0"
-                android:valueTo="1.0"
-                android:value="0.8" />
-        </LinearLayout>
-
-        <!--  输入框-->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="自定义脚本名称">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_script_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- 带说明的设置项 (典型布局)-->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="8dp">
-
+            <!-- 这里放你现有的两个输入框 (价格、数量) -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerInParent="true"
-                android:layout_toStartOf="@id/switch_log"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:baselineAligned="false">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 目标价格输入 -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="保存运行日志"
-                    android:textColor="#333333"
-                    android:textSize="16sp" />
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:hint="最高购买价">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_max_price"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:text="0" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- 目标数量输入 -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="开启后将记录脚本执行的每一步"
-                    android:textColor="#999999"
-                    android:textSize="12sp" />
+                    android:layout_weight="1"
+                    android:hint="最大购买数">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_max_quantity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:text="0" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_log"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerInParent="true" />
-        </RelativeLayout>
+                android:layout_marginTop="4dp"
+                android:text="* 设置为 0 表示不限制价格和数量"
+                android:textColor="#999999"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- 3. 多角色任务配置组 -->
+        <LinearLayout
+            android:id="@+id/group_multi_role_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="👥 多角色任务配置"
+                android:textStyle="bold"
+                android:textColor="@color/purple_500" />
+
+            <!-- 新增：角色数量输入区 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="角色总数 (最大 22)">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_role_count"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="2"
+                        android:text="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_generate_roles"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="生成列表" />
+            </LinearLayout>
+
+            <!-- 动态容器 -->
+            <LinearLayout
+                android:id="@+id/container_roles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

@@ -82,4 +82,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // 自行导入的opencv本地模型
     implementation (project(":opencv"))
+    // json字符串拼接库
+    implementation("com.google.code.gson:gson:2.10.1")
 }
