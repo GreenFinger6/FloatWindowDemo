@@ -187,15 +187,15 @@ class ScriptExecutor(
                     Log.e(TAG,"当前价格: $price, 数量: $quantity")
 
                     // 是否需要购买
-                    val isPriceOk = targetPrice == 0L || price <= targetPrice
-                    val isQtyOk = targetQty == 0L || quantity <= targetQty
+                    val isPriceOk = (targetPrice == 0L || price <= targetPrice) && quantity > 0
+                    val isQtyOk = targetQty == 0L || count <= targetQty
                     if (isPriceOk && isQtyOk) {
                         Log.e(TAG,"尝试购买: $price, 数量: $quantity")
                         // todo 执行点击购买
 
                         // 喵提醒
                         val miaoCode = ConfigManager.getMiaoCode(context)
-                        if (miaoCode != null) GameController.postMiao(miaoCode, "目标价格出现")
+                        if (miaoCode != null) GameController.postMiao(miaoCode, "目标价格:$price, 数量: $quantity")
 
                         count++
                     }
