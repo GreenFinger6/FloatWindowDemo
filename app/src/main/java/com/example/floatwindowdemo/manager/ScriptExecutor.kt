@@ -6,19 +6,14 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
-import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.Auction
 import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.YoloUtil
-import com.example.floatwindowdemo.utils.cropBitmap
-import com.example.floatwindowdemo.utils.extractPrice
-import com.example.floatwindowdemo.utils.extractQuantity
 import kotlinx.coroutines.*
 
 class ScriptExecutor(
     private val context: Context,
     private val screenCaptureManager: ScreenCaptureManager,
-    private val ocrManager: OcrManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
     private val TAG = "ScriptExecutor"
@@ -37,8 +32,6 @@ class ScriptExecutor(
     // 全局配置参数
     private val MAX_RETRY = 100 // 识别失败最大重复次数
     private val CLICK_CD = 1500L // 点击延迟，ms
-
-    private val UI_CD = 500L // UI延迟，ms
     private val REQUIRED_STABILITY_COUNT = 3 // 重复识别到多少帧才点击，建议设为 3 次
 
 
@@ -98,7 +91,7 @@ class ScriptExecutor(
 
             val targetWord = taskList[currentIndex]
             val location = withContext(Dispatchers.Default) {
-                ocrManager.findTextLocationAsync(bitmap, targetWord)
+                OcrManager.findTextLocationAsync(bitmap, targetWord)
             }
 
             if (location != null) {
@@ -125,7 +118,7 @@ class ScriptExecutor(
     fun showAllText() {
         runStreamingTask { bitmap ->
             val text = withContext(Dispatchers.Default) {
-                ocrManager.recognizeTextAsync(bitmap)
+                OcrManager.recognizeTextAsync(bitmap)
             }
             Log.d(TAG, "📝 识别内容: ${text.replace("\n", " ")}")
         }
@@ -145,7 +138,7 @@ class ScriptExecutor(
      */
     fun startAuction() {
         OpencvUtil.preloadTemplates(context, Auction.templateList)
-        val auction = AuctionManager(context, ocrManager)
+        val auction = AuctionManager(context)
         runStreamingTask { bitmap ->
             if (auction.onFrame(bitmap)) {
                 onStatusUpdate("任务完成")

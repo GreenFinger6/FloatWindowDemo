@@ -1,6 +1,5 @@
 package com.example.floatwindowdemo.manager
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
@@ -9,10 +8,11 @@ import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 data class OcrLocation(val x: Int, val y: Int)
-class OcrManager(private val context: Context) {
+object OcrManager {
 
-    // 1. 初始化 ML Kit 识别器
+    // 初始化 ML Kit 识别器
     private val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+    private const val TAG = "OcrManager"
 
     /**
      * 执行 OCR 识别
@@ -26,7 +26,7 @@ class OcrManager(private val context: Context) {
                 continuation.resume(visionText.text) // 恢复协程并返回结果
             }
             .addOnFailureListener { e ->
-                Log.e("OcrManager", "OCR 识别失败: ${e.message}")
+                Log.e(TAG, "OCR 识别失败: ${e.message}")
                 continuation.resume("")
             }
     }
@@ -62,16 +62,9 @@ class OcrManager(private val context: Context) {
                 continuation.resume(foundLocation)
             }
             .addOnFailureListener { e ->
-                Log.e("OcrManager", "OCR 识别出错: ${e.message}")
+                Log.e(TAG, "OCR 识别出错: ${e.message}")
                 // 失败时也恢复协程，返回 null
                 continuation.resume(null)
             }
-    }
-
-    /**
-     * 停止 OCR（释放资源）
-     */
-    fun stop() {
-        recognizer.close()
     }
 }

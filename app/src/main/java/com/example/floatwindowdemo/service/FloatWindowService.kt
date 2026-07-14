@@ -22,7 +22,6 @@ import com.example.floatwindowdemo.databinding.FloatWindowBinding
 import androidx.core.view.isGone
 import com.example.floatwindowdemo.MainActivity
 import com.example.floatwindowdemo.databinding.LayoutToastBinding
-import com.example.floatwindowdemo.manager.OcrManager
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
 import com.example.floatwindowdemo.manager.ScriptExecutor
 import com.example.floatwindowdemo.utils.ConfigManager
@@ -31,8 +30,6 @@ class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
-    // ocr识别
-    private lateinit var ocrManager: OcrManager
     // 屏幕获取
     private lateinit var screenCaptureManager: ScreenCaptureManager
     // 任务执行
@@ -66,10 +63,9 @@ class FloatWindowService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
 
         // 由 Service 统一管理这些“重型”对象的生命周期
-        ocrManager = OcrManager(this) // OCR识别模型
         screenCaptureManager = ScreenCaptureManager(this) // 屏幕流失获取
         // Executor脚本执行实例
-        scriptExecutor = ScriptExecutor(this,screenCaptureManager, ocrManager) { message ->
+        scriptExecutor = ScriptExecutor(this, screenCaptureManager) { message ->
             // 当收到消息更新时
             showCustomToast(message)
             // 自动同步按钮文字逻辑 使用 Handler 确保在主线程更新 UI
@@ -372,10 +368,7 @@ class FloatWindowService : Service() {
         // 移除所有尚未执行的定时隐藏任务，防止服务销毁后还尝试操作 UI
         toastHandler.removeCallbacksAndMessages(null)
 
-        // 释放 ML Kit 引擎和屏幕采集会话，防止内存泄漏和通知栏残留
-        if (::ocrManager.isInitialized) {
-            ocrManager.stop()
-        }
+        // 释放屏幕采集会话，防止内存泄漏和通知栏残留
         if (::screenCaptureManager.isInitialized) {
             screenCaptureManager.stop()
         }

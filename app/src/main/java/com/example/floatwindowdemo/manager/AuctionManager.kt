@@ -19,10 +19,7 @@ enum class AuctionState {
     RECOVERY    // 异常/转场状态：等待或尝试返回
 }
 
-class AuctionManager(
-    private val context: Context,
-    private val ocrManager: OcrManager,
-) {
+class AuctionManager(private val context: Context) {
     private val TAG = "AuctionManager"
     private val UI_CD = 500L // UI延迟，ms
 
@@ -101,7 +98,7 @@ class AuctionManager(
         // 识别价格
         val priceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, bitmap)
         val rawText = withContext(Dispatchers.Default) {
-            ocrManager.recognizeTextAsync(priceBitmap)
+            OcrManager.recognizeTextAsync(priceBitmap)
         }
         priceBitmap.recycle()
 
