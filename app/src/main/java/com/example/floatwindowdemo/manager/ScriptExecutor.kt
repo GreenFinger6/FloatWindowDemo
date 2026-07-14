@@ -195,7 +195,7 @@ class ScriptExecutor(
 
                         // 喵提醒
                         val miaoCode = ConfigManager.getMiaoCode(context)
-                        if (miaoCode != null) GameController.postMiao(miaoCode, "目标价格:$price, 数量: $quantity")
+                        if (miaoCode != null) GameController.postMiao(miaoCode, "尝试购买:$price, 数量: $quantity")
 
                         count++
                     }
