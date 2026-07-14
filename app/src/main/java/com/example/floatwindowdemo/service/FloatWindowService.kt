@@ -171,6 +171,10 @@ class FloatWindowService : Service() {
                         // 调用多角色任务方法
                         scriptExecutor.runYoloTask()
                     }
+                    2 -> {
+                        // test
+                        scriptExecutor.saveScreen()
+                    }
                 }
                 val taskList = listOf("开始游戏","选角", "game")
                 // scriptExecutor.execute(taskList)

@@ -29,7 +29,7 @@ class GeneralSettingsFragment : Fragment() {
         )
     }
     companion object { // 静态常量
-        private val MAIN_TASKS = arrayOf("拍卖行抢拍", "多角色任务")
+        private val MAIN_TASKS = arrayOf("拍卖行抢拍", "多角色任务", "测试任务")
     }
 
     override fun onCreateView(
