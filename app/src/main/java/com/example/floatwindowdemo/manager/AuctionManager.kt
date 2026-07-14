@@ -20,41 +20,39 @@ enum class AuctionState {
 }
 
 class AuctionManager(
-    context: Context,
+    private val context: Context,
     private val ocrManager: OcrManager,
-    private val screenCaptureManager: ScreenCaptureManager
 ) {
     private val TAG = "AuctionManager"
+    private val UI_CD = 500L // UI延迟，ms
 
     // 业务内部状态
-    private var lastPrice = -1L
-    private var consecutiveCount = 0
-    private var purchasedCount = 0
+    private var lastPrice = -1L // 最后一次识别到的价格
+    private var consecutiveCount = 0 // 观察到帧计数
+    private var purchasedCount = 0 // 已购买数量
 
     // 从配置中读取
     private val config = ConfigManager.getAuctionConfig(context)
-
+    val targetPrice = config.maxPrice
+    val targetQty = config.maxQuantity
     /**
      * 核心逻辑入口：处理每一帧
      */
     suspend fun onFrame(bitmap: Bitmap): Boolean {
-        // 0. 检查任务是否完成
-        if (config.maxQuantity != 0L && purchasedCount >= config.maxQuantity) {
+        // 逻辑终点: 购买数量达到预期
+        if (targetQty != 0L && purchasedCount >= targetPrice) {
             return true // 返回 true 表示任务终结
         }
 
         // 1. 状态判定（真正 FSM 的核心）
-        // 这里可以优化：不需要每一帧都全屏 OCR，可以根据上一次状态缩小识别区域
         val state = detectCurrentState(bitmap)
-
         when (state) {
             AuctionState.IN_LIST -> handleListState()
             AuctionState.IN_DETAIL -> handleDetailState(bitmap)
             AuctionState.RECOVERY -> {
-                Log.d(TAG, "等待 UI 响应或处理弹窗...")
-                delay(500)
+                // 尝试返回
+                AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
             }
-            else -> { /* 识别中，不做动作 */ }
         }
 
         return false
@@ -63,64 +61,88 @@ class AuctionManager(
     /**
      * 识别当前在哪个页面
      */
-    private suspend fun detectCurrentState(bitmap: Bitmap): AuctionState {
+    suspend fun detectCurrentState(bitmap: Bitmap): AuctionState {
         // 使用 OCR 识别标题关键字来判定页面
-        val template = OpencvUtil.templateCache["button_retry"] ?: return AuctionState.RECOVERY
+        val template1 = OpencvUtil.templateCache[Auction.templateList[0]]
+        val template2 = OpencvUtil.templateCache[Auction.templateList[1]]
 
-        // 1. 切换到 CPU 密集型线程池进行计算
-        val resultPoint = withContext(Dispatchers.Default) {
-            // 这里的 findImage 运行在后台，不会阻塞悬浮窗拖拽
-            OpencvUtil.findImage(bitmap, template, 0.9)
+
+        if (template1 != null && template2 != null) {
+            // 切换到 CPU 密集型线程池进行计算
+            val resultPoint1 = withContext(Dispatchers.Default) {
+                OpencvUtil.findImage(bitmap, template1, 0.9)
+            }
+            if (resultPoint1 != null) {
+                return AuctionState.IN_LIST
+            }
+            // 切换到 CPU 密集型线程池进行计算
+            val resultPoint2 = withContext(Dispatchers.Default) {
+                OpencvUtil.findImage(bitmap, template2, 0.9)
+            }
+            if (resultPoint2 != null) {
+                return AuctionState.IN_DETAIL
+            }
+
         }
-        // 2. 计算完成后，回到主线程处理结果（launch 默认在 Main）
-        if (resultPoint != null) {
-            return AuctionState.IN_DETAIL
-        }else return AuctionState.IN_LIST
+        return AuctionState.RECOVERY
     }
 
     private suspend fun handleListState() {
-        Log.d(TAG, "状态：列表页 -> 点击商品")
-        AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang)
-        lastPrice = -1L
-        consecutiveCount = 0
-        delay(600) // 等待详情页弹出的动画
+        // 点击商品
+        AutomationService.instance?.click(Auction.Buttons.PaiMaiHang)
+        // 等待界面弹出
+        delay(UI_CD)
     }
 
     private suspend fun handleDetailState(bitmap: Bitmap) {
-        // 1. 识价
-        val priceBitmap = screenCaptureManager.cropBitmap(GameConfig.Regions.MIN_PRICE, bitmap)
-        val rawText = ocrManager.recognizeTextAsync(priceBitmap)
+        // 识别价格
+        val priceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, bitmap)
+        val rawText = withContext(Dispatchers.Default) {
+            ocrManager.recognizeTextAsync(priceBitmap)
+        }
         priceBitmap.recycle()
 
+        // 使用正则从 String 中提取信息
         val price = extractPrice(rawText)
         val quantity = extractQuantity(rawText)
 
-        // 2. 稳定性检查
-        if (price > 0 && price == lastPrice) {
+        // 价格稳定，且出现多帧之后才确定
+        if (price > 0 && price == lastPrice && quantity > 0) {
             consecutiveCount++
         } else {
-            lastPrice = price
             consecutiveCount = 0
             return // 价格变动，等下一帧
         }
 
         if (consecutiveCount >= 3) {
-            Log.e(TAG, "价格稳定: $price, 准备判断")
+            // --- 价格已稳定，执行业务逻辑 ---
+            Log.e(TAG,"当前价格: $price, 数量: $quantity")
 
-            // 3. 购买逻辑
-            if (config.maxPrice == 0L || price <= config.maxPrice) {
+            // 是否需要购买
+            val isPriceOk = targetPrice == 0L || price <= targetPrice
+            val isQtyOk = targetQty == 0L || purchasedCount <= targetQty
+            if (isPriceOk && isQtyOk) {
                 doPurchase(price, quantity)
             }
 
-            // 4. 操作完必须返回
-            AutomationService.instance?.click(GameConfig.Buttons.PaiMaiHang2)
-            delay(800)
+            // 操作完后，返回商品列表
+            AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
+            delay(UI_CD)
+
+            // 重置步骤，进入下一次循环
+            lastPrice = -1L
+            consecutiveCount = 0
         }
     }
 
-    private fun doPurchase(price: Long, qty: Long) {
-        Log.e(TAG, "命中目标！执行购买: $price")
-        // AutomationService.instance?.click(...)
+    private suspend fun doPurchase(price: Long, qty: Long) {
+        Log.e(TAG,"尝试购买: $price, 数量: $qty")
+        // todo 执行点击购买
+
+        // 喵提醒
+        val miaoCode = ConfigManager.getMiaoCode(context)
+        if (miaoCode != null) GameController.postMiao(miaoCode, "尝试购买:$price, 数量: $qty")
+
         purchasedCount++
     }
 }

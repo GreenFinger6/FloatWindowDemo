@@ -2,6 +2,8 @@ package com.example.floatwindowdemo.utils
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.util.Log
 
 fun installApk(context: Context, apkFile: java.io.File) {
     val intent = Intent(Intent.ACTION_VIEW)
@@ -53,3 +55,27 @@ fun extractQuantity(text: String): Long {
     return match.replace(",", "").toLongOrNull() ?: 0L
 }
 
+
+// 裁剪 Bitmap 的专业处理
+fun cropBitmap(rectArea: RectArea, bitmap: Bitmap): Bitmap {
+    try {
+        val bitmapWidth = bitmap.width
+        val bitmapHeight = bitmap.height
+
+        // 1. 将比例换算为真实像素
+        val left = (rectArea.x1 * bitmapWidth).toInt().coerceIn(0, bitmapWidth - 1)
+        val top = (rectArea.y1 * bitmapHeight).toInt().coerceIn(0, bitmapHeight - 1)
+        val right = (rectArea.x2 * bitmapWidth).toInt().coerceIn(left + 1, bitmapWidth)
+        val bottom = (rectArea.y2 * bitmapHeight).toInt().coerceIn(top + 1, bitmapHeight)
+
+        // 2. 计算宽度和高度
+        val width = right - left
+        val height = bottom - top
+
+        // 3. 执行裁剪
+        return Bitmap.createBitmap(bitmap, left, top, width, height)
+    } catch (e: Exception) {
+        Log.e("CommonUtil", "裁剪失败，返回原图: ${e.message}")
+        return bitmap
+    }
+}

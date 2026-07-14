@@ -66,7 +66,7 @@ object OpencvUtil {
             val maxVal = mmr.maxVal // 相似度分数
             val maxLoc = mmr.maxLoc // 匹配到的左上角坐标
 
-            Log.d(TAG, "匹配得分: $maxVal")
+//            Log.d(TAG, "匹配得分: $maxVal")
 
             // 6. 释放 Mat 内存（非常重要，防止内存泄漏）
             result.release()
@@ -92,8 +92,6 @@ object OpencvUtil {
      * @param taskList 图片路径list
      */
      fun preloadTemplates(context: Context, taskList: List<String>) {
-        // 先手动释放内存，再清空，最后重新加载
-        releaseTemplates()
         taskList.forEach { taskName ->
             // 假设图片名和任务名一致
             val fileName = "templates/$taskName.png"
