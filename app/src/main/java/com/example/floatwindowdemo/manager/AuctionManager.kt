@@ -46,12 +46,15 @@ class AuctionManager(
 
         // 1. 状态判定（真正 FSM 的核心）
         val state = detectCurrentState(bitmap)
+        Log.d(TAG,"当前状态: $state")
         when (state) {
             AuctionState.IN_LIST -> handleListState()
             AuctionState.IN_DETAIL -> handleDetailState(bitmap)
             AuctionState.RECOVERY -> {
                 // 尝试返回
                 AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
+                // 等待界面弹出
+                delay(UI_CD)
             }
         }
 
@@ -110,13 +113,14 @@ class AuctionManager(
         if (price > 0 && price == lastPrice && quantity > 0) {
             consecutiveCount++
         } else {
+            lastPrice = price
             consecutiveCount = 0
             return // 价格变动，等下一帧
         }
 
-        if (consecutiveCount >= 3) {
+        if (consecutiveCount >= 1) {
             // --- 价格已稳定，执行业务逻辑 ---
-            Log.e(TAG,"当前价格: $price, 数量: $quantity")
+            Log.d(TAG,"当前价格: $price, 数量: $quantity")
 
             // 是否需要购买
             val isPriceOk = targetPrice == 0L || price <= targetPrice
@@ -127,6 +131,7 @@ class AuctionManager(
 
             // 操作完后，返回商品列表
             AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
+            // 等待界面弹出
             delay(UI_CD)
 
             // 重置步骤，进入下一次循环

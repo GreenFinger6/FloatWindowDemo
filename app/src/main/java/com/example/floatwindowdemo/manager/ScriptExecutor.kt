@@ -144,82 +144,12 @@ class ScriptExecutor(
      * 开始拍卖行抢拍
      */
     fun startAuction() {
-        retryCount = 0; // 连续未识别到的次数
-        var testStep = 0 // 0: 准备点击商品, 1: 准备识别价格
-        var lastPrice = -1L // 最后一次识别到的价格
-        var count = 0 // 记录已购买数量
-        val config = ConfigManager.getAuctionConfig(context)
-        val targetPrice = config.maxPrice
-        val targetQty = config.maxQuantity
         OpencvUtil.preloadTemplates(context, Auction.templateList)
         val auction = AuctionManager(context, ocrManager)
         runStreamingTask { bitmap ->
-            // 逻辑终点: 购买数量达到预期
-            if (targetQty != 0L && count >= targetQty) {
+            if (auction.onFrame(bitmap)) {
                 onStatusUpdate("任务完成")
                 stop()
-                return@runStreamingTask
-            }
-            Log.e(TAG,"当前阶段: ${auction.detectCurrentState(bitmap)}")
-
-            if (testStep == 0) {
-                // 步骤0：点击商品
-                AutomationService.instance?.click(Auction.Buttons.PaiMaiHang)
-                testStep = 1
-                delay(UI_CD) // 等待界面弹出
-            } else {
-                // 步骤1：识别价格
-                val priceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, bitmap)
-                val rawText = withContext(Dispatchers.Default) {
-                    ocrManager.recognizeTextAsync(priceBitmap)
-                }
-                priceBitmap.recycle()
-
-                // 使用正则从 String 中提取信息
-                val price = extractPrice(rawText)
-                val quantity = extractQuantity(rawText)
-                // 价格稳定，且出现多帧之后才确定
-                if (price > 0 && price == lastPrice && quantity > 0) {
-                    consecutiveCount++
-                } else {
-                    consecutiveCount = 0
-                    retryCount++
-                }
-                // 连续识别到相同价格
-                if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
-                    // --- 价格已稳定，执行业务逻辑 ---
-                    Log.e(TAG,"当前价格: $price, 数量: $quantity")
-
-                    // 是否需要购买
-                    val isPriceOk = targetPrice == 0L || price <= targetPrice
-                    val isQtyOk = targetQty == 0L || count <= targetQty
-                    if (isPriceOk && isQtyOk) {
-                        Log.e(TAG,"尝试购买: $price, 数量: $quantity")
-                        // todo 执行点击购买
-
-                        // 喵提醒
-                        val miaoCode = ConfigManager.getMiaoCode(context)
-                        if (miaoCode != null) GameController.postMiao(miaoCode, "尝试购买:$price, 数量: $quantity")
-
-                        count++
-                    }
-
-                    // 操作完后，返回商品列表
-                    AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
-                    delay(UI_CD)
-
-                    // 重置步骤，进入下一次循环
-                    testStep = 0
-                    lastPrice = -1L
-                    consecutiveCount = 0
-                    retryCount = 0
-                }else if (retryCount >= REQUIRED_STABILITY_COUNT) {
-                    // 此时可能是商品没货，需要返回刷新
-                    AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
-                    delay(UI_CD)
-                    testStep = 0
-                    retryCount = 0
-                }
             }
         }
     }
