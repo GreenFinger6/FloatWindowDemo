@@ -57,6 +57,7 @@ class AuctionManager(private val context: Context) {
         }
 
         return false
+
     }
 
     /**
@@ -67,7 +68,10 @@ class AuctionManager(private val context: Context) {
         val template1 = OpencvUtil.templateCache[Auction.templateList[0]]
         val template2 = OpencvUtil.templateCache[Auction.templateList[1]]
 
-        if (template1 == null || template2 == null) return@withContext AuctionState.RECOVERY
+        if (template1 == null || template2 == null){
+            Log.e(TAG,"状态模版加载失败")
+            return@withContext AuctionState.RECOVERY
+        }
 
         // 2. 并行启动两个识别任务
         val listMatch = async {
