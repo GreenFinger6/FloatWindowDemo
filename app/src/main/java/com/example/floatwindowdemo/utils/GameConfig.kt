@@ -8,21 +8,21 @@ package com.example.floatwindowdemo.utils
 object Auction {
     // 1. 按钮中心坐标 (x, y)
     object Buttons {
-        val PaiMaiHang = Pair(0.4964f, 0.2306f) // 拍卖行第一个物品位置
-        val PaiMaiHang2 = Pair(0.0534f, 0.5764f) // 返回拍卖行
-        val PaiMaiHang3 = Pair(66f, 415f) // 购买
-        val PaiMaiHang4 = Pair(66f, 415f) // 购买确认
+        val Detail = Pair(0.4964f, 0.2306f) // 拍卖行第一个物品位置
+        val Back = Pair(0.0534f, 0.5764f) // 返回
+        val Purchase = Pair(894f, 611f) // 购买
+        val PurchaseConfirm = Pair(66f, 415f) // 购买确认
     }
 
     // 2. 裁剪区域 (x1, y1, x2, y2)
     // 建议使用自定义的数据类或 Rect，这里用自定义简单的封装
     object Regions {
-        // 顶部公告区域
-        val NOTICE = RectArea(0f, 0f, 1080f, 200f)
-        // 底部菜单区域
-        val MENU = RectArea(0f, 2000f, 1080f, 2400f)
-        // 游戏核心操作区
-        val BATTLE_FIELD = RectArea(100f, 400f, 980f, 1800f)
+        // 准备购买数量区域
+        val PRE_BUY = RectArea(0f, 0f, 1080f, 200f)
+
+        // 成功购买数量区域
+        val SUCCESS_BUY = RectArea(0f, 0f, 1080f, 200f)
+
         // 拍卖行最低价区域
         val MIN_PRICE = RectArea(0.1148f, 0.3708f, 0.4770f, 0.4556f)
     }

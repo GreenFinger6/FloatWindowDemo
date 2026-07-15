@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
@@ -49,7 +50,7 @@ class AuctionManager(private val context: Context) {
             AuctionState.IN_DETAIL -> handleDetailState(bitmap)
             AuctionState.RECOVERY -> {
                 // 尝试返回
-                AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
+                AutomationService.instance?.click(Auction.Buttons.Back)
                 // 等待界面弹出
                 delay(UI_CD)
             }
@@ -59,37 +60,35 @@ class AuctionManager(private val context: Context) {
     }
 
     /**
-     * 识别当前在哪个页面
+     * 识别当前页面状态
      */
-    suspend fun detectCurrentState(bitmap: Bitmap): AuctionState {
-        // 使用 OCR 识别标题关键字来判定页面
+    suspend fun detectCurrentState(bitmap: Bitmap): AuctionState = withContext(Dispatchers.Default) {
+        // 1. 获取模板
         val template1 = OpencvUtil.templateCache[Auction.templateList[0]]
         val template2 = OpencvUtil.templateCache[Auction.templateList[1]]
 
+        if (template1 == null || template2 == null) return@withContext AuctionState.RECOVERY
 
-        if (template1 != null && template2 != null) {
-            // 切换到 CPU 密集型线程池进行计算
-            val resultPoint1 = withContext(Dispatchers.Default) {
-                OpencvUtil.findImage(bitmap, template1, 0.9)
-            }
-            if (resultPoint1 != null) {
-                return AuctionState.IN_LIST
-            }
-            // 切换到 CPU 密集型线程池进行计算
-            val resultPoint2 = withContext(Dispatchers.Default) {
-                OpencvUtil.findImage(bitmap, template2, 0.9)
-            }
-            if (resultPoint2 != null) {
-                return AuctionState.IN_DETAIL
-            }
-
+        // 2. 并行启动两个识别任务
+        val listMatch = async {
+            OpencvUtil.findImage(bitmap, template1, 0.9)
         }
-        return AuctionState.RECOVERY
+        val detailMatch = async {
+            OpencvUtil.findImage(bitmap, template2, 0.9)
+        }
+
+        // 3. 等待结果并决策
+        // 优先判断列表，再判断详情
+        return@withContext when {
+            listMatch.await() != null -> AuctionState.IN_LIST
+            detailMatch.await() != null -> AuctionState.IN_DETAIL
+            else -> AuctionState.RECOVERY
+        }
     }
 
     private suspend fun handleListState() {
         // 点击商品
-        AutomationService.instance?.click(Auction.Buttons.PaiMaiHang)
+        AutomationService.instance?.click(Auction.Buttons.Detail)
         // 等待界面弹出
         delay(UI_CD)
     }
@@ -127,7 +126,7 @@ class AuctionManager(private val context: Context) {
             }
 
             // 操作完后，返回商品列表
-            AutomationService.instance?.click(Auction.Buttons.PaiMaiHang2)
+            AutomationService.instance?.click(Auction.Buttons.Back)
             // 等待界面弹出
             delay(UI_CD)
 
