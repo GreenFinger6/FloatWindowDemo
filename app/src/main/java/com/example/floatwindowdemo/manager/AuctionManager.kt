@@ -75,10 +75,10 @@ class AuctionManager(private val context: Context) {
 
         // 2. 并行启动两个识别任务
         val listMatch = async {
-            OpencvUtil.findImage(bitmap, template1, 0.9)
+            OpencvUtil.findImage(bitmap, template1)
         }
         val detailMatch = async {
-            OpencvUtil.findImage(bitmap, template2, 0.9)
+            OpencvUtil.findImage(bitmap, template2)
         }
 
         // 3. 等待结果并决策

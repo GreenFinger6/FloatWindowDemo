@@ -32,7 +32,7 @@ object OpencvUtil {
      * @param threshold 相似度阈值 (0.0 ~ 1.0)，建议 0.8
      * @return 匹配目标的中心点坐标，如果未找到则返回 null
      */
-    fun findImage(source: Bitmap, template: Bitmap, threshold: Double = 0.8): Point? {
+    fun findImage(source: Bitmap, template: Bitmap, threshold: Double = 0.9): Point? {
 
         // 每次调用前先检查
         if (!checkInit()) {

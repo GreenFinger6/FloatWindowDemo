@@ -5,9 +5,9 @@ import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.Auction
 import com.example.floatwindowdemo.utils.OpencvUtil
+import com.example.floatwindowdemo.utils.SequenceClicker
 import com.example.floatwindowdemo.utils.YoloUtil
 import kotlinx.coroutines.*
 
@@ -23,17 +23,9 @@ class ScriptExecutor(
 
 
     // 脚本运行状态参数
-    private var retryCount = 0 //重试次数
-    private var consecutiveCount = 0 // 观察到帧计数
     var isRunning = false // 开始状态标记
     var isPaused = false // 暂停状态标记
     private var isProcessing = false // 全局的“锁”，防止逻辑重叠
-
-    // 全局配置参数
-    private val MAX_RETRY = 100 // 识别失败最大重复次数
-    private val CLICK_CD = 1500L // 点击延迟，ms
-    private val REQUIRED_STABILITY_COUNT = 3 // 重复识别到多少帧才点击，建议设为 3 次
-
 
 
     /**
@@ -76,41 +68,16 @@ class ScriptExecutor(
         }
     }
 
+    /**
+     * 执行一系列点击任务
+     */
     fun execute(taskList: List<String>) {
-        var currentIndex = 0 // 记录当前执行任务索引
-        consecutiveCount = 0
-
+        val clicker = SequenceClicker(taskList)
         runStreamingTask { bitmap ->
-
-            // 逻辑终点
-            if (currentIndex >= taskList.size) {
-                onStatusUpdate("任务完成")
+            // processFrame 会处理所有细节，我们只需要判断是否结束
+            if (clicker.processFrame(bitmap)) {
+                onStatusUpdate("任务序列已执行完毕")
                 stop()
-                return@runStreamingTask // 相当于退出本次 action
-            }
-
-            val targetWord = taskList[currentIndex]
-            val location = withContext(Dispatchers.Default) {
-                OcrManager.findTextLocationAsync(bitmap, targetWord)
-            }
-
-            if (location != null) {
-                consecutiveCount++
-                if (consecutiveCount >= REQUIRED_STABILITY_COUNT) {
-                    // 只有连续观察到指定次数，才认为UI已稳定，执行操作
-                    Log.d(TAG,"目标稳定，执行点击: $targetWord")
-                    AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
-                    currentIndex++
-                    consecutiveCount = 0
-                    delay(CLICK_CD)
-                }
-            } else {
-                consecutiveCount = 0
-                retryCount++
-                if (retryCount >= MAX_RETRY) {
-                    Log.d(TAG,"重试次数过多，找不着$targetWord")
-                    stop()
-                }
             }
         }
     }
