@@ -11,10 +11,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.floatwindowdemo.databinding.FragmentOtherSettingsBinding
-import com.example.floatwindowdemo.manager.GameController
 import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.NetworkUtil
 import com.example.floatwindowdemo.utils.installApk
+import com.example.floatwindowdemo.utils.postMiao
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -110,7 +110,7 @@ class OtherSettingsFragment : Fragment() {
                     // 显示正在发送的状态
                     binding.btnTestPost.isEnabled = false
                     binding.btnTestPost.text = "发送中..."
-                    val isSuccess = GameController.postMiao(miaoCode, "这是一条测试消息")
+                    val isSuccess = postMiao(miaoCode, "这是一条测试消息")
 
                     // 根据结果显示 Toast
                     if (isSuccess) {

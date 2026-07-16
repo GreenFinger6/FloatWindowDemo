@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
+import org.json.JSONObject
 
 fun installApk(context: Context, apkFile: java.io.File) {
     val intent = Intent(Intent.ACTION_VIEW)
@@ -78,4 +79,19 @@ fun cropBitmap(rectArea: RectArea, bitmap: Bitmap): Bitmap {
         Log.e("CommonUtil", "裁剪失败，返回原图: ${e.message}")
         return bitmap
     }
+}
+
+/***
+ * 发送喵提醒
+ * id: 用户id
+ * text：提醒消息
+ */
+suspend fun postMiao(id: String, text: String): Boolean{
+    // 直接构建 JSON 对象
+    val params = JSONObject().apply {
+        put("id", id)
+        put("text", text)
+    }
+    // 异步发送
+    return NetworkUtil.sendPost("https://miaotixing.com/trigger", params)
 }
