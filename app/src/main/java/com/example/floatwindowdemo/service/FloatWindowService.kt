@@ -143,10 +143,11 @@ class FloatWindowService : Service() {
             windowManager.updateViewLayout(binding.root, layoutParams)
         }
         // 在 initFloatWindow绑定处
+        // 悬浮球点击回调
         binding.ivFloatBall.onActionDownListener = {
             scriptExecutor.isPausedBySystem = true
         }
-
+        // 悬浮球松开点击回调
         binding.ivFloatBall.onActionUpListener = {
             // 延迟一小会儿恢复，确保系统触摸流完全断开
             binding.ivFloatBall.postDelayed({
@@ -178,6 +179,7 @@ class FloatWindowService : Service() {
                     2 -> {
                         // test
                         scriptExecutor.saveScreen()
+                        // scriptExecutor.execute()
                     }
                 }
                 val taskList = listOf("开始游戏","选角", "game")

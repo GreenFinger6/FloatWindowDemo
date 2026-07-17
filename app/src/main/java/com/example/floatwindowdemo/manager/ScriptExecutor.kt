@@ -87,11 +87,11 @@ class ScriptExecutor(
     /**
      * 执行一系列点击任务
      */
-    fun execute(taskList: List<String>) {
-        val clicker = SequenceClicker(taskList)
+    fun execute() {
+        OpencvUtil.preloadTemplates(context, Auction.buyList)
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
-            if (clicker.processFrame(bitmap)) {
+            if (SequenceClicker.runSequence(Auction.buyList)) {
                 onStatusUpdate("任务序列已执行完毕")
                 stop()
             }
