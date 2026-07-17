@@ -120,7 +120,10 @@ class ScriptExecutor(
      * 开始拍卖行抢拍
      */
     fun startAuction() {
+        // 状态识别模版预加载
         OpencvUtil.preloadTemplates(context, Auction.templateList)
+        // 购买识别模版加载
+        OpencvUtil.preloadTemplates(context, Auction.buyList)
         val auction = AuctionManager(context)
         runStreamingTask { bitmap ->
             if (auction.onFrame(bitmap)) {

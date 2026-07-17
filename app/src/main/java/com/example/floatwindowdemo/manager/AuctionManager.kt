@@ -141,7 +141,7 @@ class AuctionManager(private val context: Context) {
     }
 
     private suspend fun doPurchase(price: Long, qty: Long) {
-        Log.e(TAG,"尝试购买: $price, 数量: $qty")
+        Log.i(TAG,"尝试购买: $price, 数量: $qty")
         // 执行点击购买
         if(SequenceClicker.runSequence(Auction.buyList)){
             // 购买成功
