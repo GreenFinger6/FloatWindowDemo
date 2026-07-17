@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.view.accessibility.AccessibilityEvent
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class AutomationService : AccessibilityService() {
 
@@ -59,6 +61,40 @@ class AutomationService : AccessibilityService() {
     fun click(x: Int, y: Int) = click(x.toFloat(), y.toFloat())
     fun click(x: Double, y: Double) = click(x.toFloat(), y.toFloat())
     fun click(t: Pair<Float, Float>) = click(t.first, t.second)
+
+    /**
+     * 在屏幕上执行滑动/拖动
+     * @param start 滑动起始坐标
+     * @param end 滑动结束坐标
+     * @param duration 滑动持续时间（毫秒），默认 500ms。时间越短速度越快。
+     */
+    suspend fun swipe(start: Pair<Float, Float>, end: Pair<Float, Float>, duration: Long = 500L): Boolean =
+        suspendCancellableCoroutine { continuation ->
+
+            val metrics = resources.displayMetrics
+            val fStartX = if (start.first in 0f..1f) start.first * metrics.widthPixels else start.first
+            val fStartY = if (start.second in 0f..1f) start.second * metrics.heightPixels else start.second
+            val fEndX = if (end.first in 0f..1f) end.first * metrics.widthPixels else end.first
+            val fEndY = if (end.second in 0f..1f) end.second * metrics.heightPixels else end.second
+
+            val path = Path().apply {
+                moveTo(fStartX, fStartY)
+                lineTo(fEndX, fEndY)
+            }
+
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+                .build()
+
+            dispatchGesture(gesture, object : GestureResultCallback() {
+                override fun onCompleted(gestureDescription: GestureDescription?) {
+                    if (continuation.isActive) continuation.resume(true)
+                }
+                override fun onCancelled(gestureDescription: GestureDescription?) {
+                    if (continuation.isActive) continuation.resume(false)
+                }
+            }, null)
+        }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // 必须重写，但如果不处理系统事件可以留空
