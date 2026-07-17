@@ -10,6 +10,7 @@ import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.SequenceClicker
 import com.example.floatwindowdemo.utils.YoloUtil
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 class ScriptExecutor(
     private val context: Context,
@@ -109,9 +110,17 @@ class ScriptExecutor(
 
     fun saveScreen(){
         runStreamingTask { bitmap ->
-            // 保存图片
-            OpencvUtil.saveDebugBitmap(context, bitmap)
-            onStatusUpdate("任务完成")
+            onStatusUpdate("正在截取...")
+            // 1. 放弃当前的初始帧（可能是黑屏）
+            // 2. 挂起并等待 300ms 后，主动拿一张此时此刻最新的图
+            delay(300L)
+            val freshBitmap = ScreenCaptureManager.frameFlow.first()
+            try {
+                OpencvUtil.saveDebugBitmap(context, freshBitmap)
+                onStatusUpdate("保存成功")
+            } finally {
+                freshBitmap.recycle()
+            }
             stop()
         }
     }
