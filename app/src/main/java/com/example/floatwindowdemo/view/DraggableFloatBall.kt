@@ -14,7 +14,9 @@ class DraggableFloatBall @JvmOverloads constructor(
     private var lastY = 0f
     private var isDragging = false
 
-    var onDragListener: ((dx: Float, dy: Float) -> Unit)? = null
+    var onDragListener: ((dx: Float, dy: Float) -> Unit)? = null // 拖动回调
+    var onActionDownListener: (() -> Unit)? = null // 按下回调
+    var onActionUpListener: (() -> Unit)? = null // 松开回调
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
@@ -22,6 +24,7 @@ class DraggableFloatBall @JvmOverloads constructor(
                 lastX = event.rawX
                 lastY = event.rawY
                 isDragging = false
+                onActionDownListener?.invoke()
                 // 重要：调用 super 让 View 处于 "Pressed" 状态，
                 // 但要返回 true 以便接收后续的 MOVE 事件
                 super.onTouchEvent(event)
@@ -39,6 +42,7 @@ class DraggableFloatBall @JvmOverloads constructor(
                 return true // 拖动过程中，消费掉所有 MOVE 事件
             }
             MotionEvent.ACTION_UP -> {
+                onActionUpListener?.invoke()
                 if (isDragging) {
                     // --- 情况 A：如果是拖动结束 ---
                     // 1. 不调用 super.onTouchEvent(event)，防止基类触发 onClick
@@ -52,6 +56,7 @@ class DraggableFloatBall @JvmOverloads constructor(
                 }
             }
             MotionEvent.ACTION_CANCEL -> {
+                onActionUpListener?.invoke()
                 return super.onTouchEvent(event)
             }
         }

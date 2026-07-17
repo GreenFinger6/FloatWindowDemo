@@ -48,6 +48,11 @@ class AutomationService : AccessibilityService() {
                 super.onCompleted(gestureDescription)
                 // 这里可以添加点击后的日志或回调
             }
+            override fun onCancelled(gestureDescription: android.accessibilityservice.GestureDescription?) {
+                super.onCancelled(gestureDescription)
+                // 如果你拖动时没静默，这里会疯狂报错
+                android.util.Log.e("Automation", "点击被取消: 可能是由于物理触摸冲突")
+            }
         }, null)
     }
 

@@ -62,10 +62,8 @@ class FloatWindowService : Service() {
         // Service 启动后的 5秒内 调用 startForeground()
         startForeground(NOTIFICATION_ID, createNotification())
 
-        // 由 Service 统一管理这些“重型”对象的生命周期
-        screenCaptureManager = ScreenCaptureManager(this) // 屏幕流失获取
         // Executor脚本执行实例
-        scriptExecutor = ScriptExecutor(this, screenCaptureManager) { message ->
+        scriptExecutor = ScriptExecutor(this) { message ->
             // 当收到消息更新时
             showCustomToast(message)
             // 自动同步按钮文字逻辑 使用 Handler 确保在主线程更新 UI
@@ -84,7 +82,7 @@ class FloatWindowService : Service() {
         }
         if (data != null) {
             // 传入 RESULT_OK 和 令牌
-            screenCaptureManager.init(Activity.RESULT_OK, data)
+            ScreenCaptureManager.init(this,Activity.RESULT_OK, data)
         }
         return START_STICKY
     }
@@ -144,7 +142,17 @@ class FloatWindowService : Service() {
             // 某些情况下系统不一定会自动重绘窗口，加上这一句可以确保窗口大小能跟随动画延展
             windowManager.updateViewLayout(binding.root, layoutParams)
         }
+        // 在 initFloatWindow绑定处
+        binding.ivFloatBall.onActionDownListener = {
+            scriptExecutor.isPausedBySystem = true
+        }
 
+        binding.ivFloatBall.onActionUpListener = {
+            // 延迟一小会儿恢复，确保系统触摸流完全断开
+            binding.ivFloatBall.postDelayed({
+                scriptExecutor.isPausedBySystem = false
+            }, 200)
+        }
         // 悬浮球拖拽事件
         binding.ivFloatBall.onDragListener = { dx, dy ->
             layoutParams.x = layoutParams.x + dx.toInt()

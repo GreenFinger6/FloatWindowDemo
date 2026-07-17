@@ -38,7 +38,7 @@ class AuctionManager(private val context: Context) {
      */
     suspend fun onFrame(bitmap: Bitmap): Boolean {
         // 逻辑终点: 购买数量达到预期
-        if (targetQty != 0L && purchasedCount >= targetPrice) {
+        if (targetQty != 0L && purchasedCount >= targetQty) {
             return true // 返回 true 表示任务终结
         }
 

@@ -13,7 +13,6 @@ import kotlinx.coroutines.*
 
 class ScriptExecutor(
     private val context: Context,
-    private val screenCaptureManager: ScreenCaptureManager,
     private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
 ) {
     private val TAG = "ScriptExecutor"
@@ -23,50 +22,67 @@ class ScriptExecutor(
 
 
     // 脚本运行状态参数
+    @Volatile
+    var isPausedBySystem = false
     var isRunning = false // 开始状态标记
     var isPaused = false // 暂停状态标记
-    private var isProcessing = false // 全局的“锁”，防止逻辑重叠
 
 
     /**
      * 【模版方法】
-     *  封装了：启动检查、内存回收、协程启动、暂停挂起、异常捕获、流程解锁
+     *  使用 Kotlin Flow 适配新的截图管理类
      */
     private fun runStreamingTask(action: suspend (Bitmap) -> Unit) {
         if (isRunning) return
         isRunning = true
-        isProcessing = false // 初始化锁状态
+        isPaused = false
 
-        screenCaptureManager.startStreaming { bitmap, onTaskComplete ->
-            // 1. 预检查：如果不运行或正在处理，直接销毁并跳过
-            if (!isRunning || isProcessing) {
-                bitmap.recycle()
-                onTaskComplete()
-                return@startStreaming
-            }
-            scope.launch {
-                try {
-                    isProcessing = true // 【上锁】
+        // 在协程中启动流的监听
+        scope.launch{
+            try {
+                // 1. 开启物理截图流后台线程
+                ScreenCaptureManager.startStreamingFlow(context)
 
-                    // 2. 暂停挂起检查
-                    while (isPaused && isRunning) {
+                onStatusUpdate("脚本启动成功")
+
+                // 2. 开始消费画面流
+                // 由于 Channel 设置了 CONFLATED，这里 collect 拿到的永远是最新的 Bitmap
+                ScreenCaptureManager.frameFlow.collect { bitmap ->
+
+                    // 暂停挂起检查
+                    while ((isPaused || isPausedBySystem) && isRunning) {
                         delay(500L)
                     }
-                    if (!isRunning) return@launch
 
-                    // 3. 执行自定义逻辑
-                    action(bitmap)
-                } catch (e: Exception) {
-                    Log.e(TAG, "执行出错: ${e.message}")
-                } finally {
-                    // 4. 【收尾工作】无论逻辑如何，统一回收与解锁
-                    isProcessing = false // 【解锁】
-                    bitmap.recycle()
-                    onTaskComplete()
+                    // 如果外部调用了 stop()，立即退出 collect
+                    if (!isRunning) {
+                        bitmap.recycle()
+                        return@collect
+                    }
+
+                    try {
+                        // 3. 执行自定义业务逻辑
+                        // 注意：如果逻辑中有 delay 或耗时操作，下一帧会在处理完后再来
+                        action(bitmap)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "逻辑执行异常: ${e.message}")
+                    } finally {
+                        // 4. 【极其重要】手动回收这一帧。
+                        // 没进入 collect 的帧由 Channel 回收，进入这里的必须由消费者（我们）回收
+                        bitmap.recycle()
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "画面流采集出错: ${e.message}")
+                stop()
+            } finally {
+                // 确保流彻底关闭
+                isRunning = false
+                ScreenCaptureManager.stopStreaming()
             }
         }
     }
+
 
     /**
      * 执行一系列点击任务
@@ -148,7 +164,7 @@ class ScriptExecutor(
     fun stop() {
         isRunning = false
         isPaused = false
-        screenCaptureManager.stopStreaming()
+        ScreenCaptureManager.stopStreaming()
         handler.removeCallbacksAndMessages(null)
         // 取消所有正在运行的协程任务
         scope.coroutineContext.cancelChildren()

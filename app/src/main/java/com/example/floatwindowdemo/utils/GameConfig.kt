@@ -10,8 +10,6 @@ object Auction {
     object Buttons {
         val Detail = Pair(0.4964f, 0.2306f) // 拍卖行第一个物品位置
         val Back = Pair(0.0534f, 0.5764f) // 返回
-        val Purchase = Pair(894f, 611f) // 购买
-        val PurchaseConfirm = Pair(66f, 415f) // 购买确认
     }
 
     // 2. 裁剪区域 (x1, y1, x2, y2)
@@ -31,6 +29,12 @@ object Auction {
     val templateList = listOf(
         "state_auction_purchase", //判断购买页面
         "state_auction_detail"  //判断商品详情
+    )
+
+    // 购买序列按钮
+    val buyList = listOf(
+        "button_buy", //购买
+        "button_confirm"  //购买确认
     )
 }
 
