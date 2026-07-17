@@ -10,72 +10,92 @@ import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
-import android.os.Looper
+import android.os.HandlerThread
+import android.util.Log
 import androidx.core.graphics.createBitmap
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
-class ScreenCaptureManager(private val context: Context) {
+object ScreenCaptureManager {
+    private val TAG = "ScreenCaptureManager"
+
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
-    private val handler = Handler(Looper.getMainLooper())
 
-    private var isStreaming = false // 是否处于持续识别状态
+    // 使用专用的后台线程处理图像，防止主线程（UI）卡顿
+    private var handlerThread: HandlerThread? = null
+    private var backgroundHandler: Handler? = null
+    private var isStreaming = false
 
-    fun init(resultCode: Int, data: Intent) {
-        val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+    // 使用 Channel 处理内存回收
+    private val _frameChannel = Channel<Bitmap>(Channel.CONFLATED) { undelivered ->
+        if (!undelivered.isRecycled) undelivered.recycle()
+    }
+
+    // 暴露为 Flow 供外部 collect
+    val frameFlow = _frameChannel.receiveAsFlow()
+
+    /**
+     * 初始化 MediaProjection
+     * 在 Activity 的授权结果回调后调用
+     */
+    fun init(context: Context, resultCode: Int, data: Intent) {
+        val projectionManager = context.applicationContext // 必须用 applicationContext
+            .getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
     }
 
-    /**
-     * 开启流式捕捉
-     * @param onFrameCaptured 提供 Bitmap
-     */
-    fun startStreaming(onFrameCaptured: (bitmap: Bitmap, onTaskComplete: () -> Unit) -> Unit) {
+    fun startStreamingFlow(context: Context) {
         if (isStreaming || mediaProjection == null) return
         isStreaming = true
+
+        // 启动后台线程
+        handlerThread = HandlerThread("CaptureThread").apply { start() }
+        backgroundHandler = Handler(handlerThread!!.looper)
 
         val metrics = context.resources.displayMetrics
         val width = metrics.widthPixels
         val height = metrics.heightPixels
         val density = metrics.densityDpi
 
-        // 1. 保持 ImageReader 存活，缓冲区设为 2 帧，确保总能拿到最新的
+        // 缓冲区设为 2，配合 acquireLatestImage 性能最佳
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-        // 2. 保持 VirtualDisplay 存活
+
         virtualDisplay = mediaProjection?.createVirtualDisplay(
-            "StreamingCapture",
+            "FlowCapture",
             width, height, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             imageReader?.surface, null, null
         )
-        // 3. 定义截取函数
-        fun captureNext() {
-            if (!isStreaming) return
 
-            // acquireLatestImage 保证拿到的是屏幕当前的最新画面，而不是之前排队的旧图
-            val image = imageReader?.acquireLatestImage()
-            if (image != null) {
-                val bitmap = processImage(image, width, height)
-                image.close()
+        // 核心循环：在后台线程抓取
+        val captureRunnable = object : Runnable {
+            override fun run() {
+                if (!isStreaming) return
 
-                // 将 bitmap 发送给 OCR，并传入一个“完成证明”
-                onFrameCaptured(bitmap) {
-                    // 当 OCR 识别结束（无论成功失败）时，外部调用这个 lambda
-                    // 从而触发下一轮截图，形成“链式反应”
-                    if (isStreaming) {
-                        handler.post { captureNext() }
+                val image = imageReader?.acquireLatestImage()
+                if (image != null) {
+                    try {
+                        // 1. 处理图像（在后台线程完成像素拷贝和裁剪）
+                        val bitmap = processImage(image, width, height)
+
+                        // 2. 发送图像。如果消费者处理慢，旧的会被自动挤掉并触发 recycle
+                        _frameChannel.trySend(bitmap)
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "画面处理异常: ${e.message}")
+                    } finally {
+                        image.close()
                     }
                 }
-            } else{
-                // 如果当前由于某些原因没拿到图，延迟一个极短的时间重试
-                handler.postDelayed({ captureNext() }, 10)
+                // 每 10ms 尝试一次抓取（100FPS 的采样率，实际取决于系统渲染）
+                backgroundHandler?.postDelayed(this, 10)
             }
         }
-        // 4. 开启第一轮
-        handler.postDelayed({ captureNext() }, 100) // 初始延迟给 VirtualDisplay 一点准备时间
+        backgroundHandler?.post(captureRunnable)
     }
 
-    // 将 ImageReader 的原始数据转为 Bitmap 的专业处理
     private fun processImage(image: android.media.Image, width: Int, height: Int): Bitmap {
         val planes = image.planes
         val buffer = planes[0].buffer
@@ -83,14 +103,12 @@ class ScreenCaptureManager(private val context: Context) {
         val rowStride = planes[0].rowStride
         val rowPadding = rowStride - pixelStride * width
 
-        // 考虑到填充（Row Padding），我们需要重新计算宽度
         val bitmap = createBitmap(width + rowPadding / pixelStride, height)
         bitmap.copyPixelsFromBuffer(buffer)
 
-        // 如果有填充，裁剪掉多余边缘
         return if (rowPadding > 0) {
             val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
-            bitmap.recycle()
+            bitmap.recycle() // 立即释放中间的大图
             croppedBitmap
         } else {
             bitmap
@@ -99,15 +117,22 @@ class ScreenCaptureManager(private val context: Context) {
 
     fun stopStreaming() {
         isStreaming = false
-        // 传入 null 代表移除该 Handler 关联的所有回调
-        handler.removeCallbacksAndMessages(null)
+        backgroundHandler?.removeCallbacksAndMessages(null)
+
+        // 清理最后一帧残留
+        _frameChannel.tryReceive().getOrNull()?.let {
+            if (!it.isRecycled) it.recycle()
+        }
+
+        handlerThread?.quitSafely()
+        handlerThread = null
+        backgroundHandler = null
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.close()
         imageReader = null
     }
 
-    // 3. 停止，释放资源
     fun stop() {
         stopStreaming()
         mediaProjection?.stop()
