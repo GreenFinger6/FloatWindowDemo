@@ -142,12 +142,17 @@ class AuctionManager(private val context: Context) {
 
     private suspend fun doPurchase(price: Long, qty: Long) {
         Log.e(TAG,"尝试购买: $price, 数量: $qty")
-        // todo 执行点击购买
+        // 执行点击购买
+        if(SequenceClicker.runSequence(Auction.buyList)){
+            // 购买成功
+            purchasedCount++
+        }
+
+        // 操作完后，返回商品列表
+        AutomationService.instance?.click(Auction.Buttons.Back)
 
         // 喵提醒
         val miaoCode = ConfigManager.getMiaoCode(context)
         if (miaoCode != null) postMiao(miaoCode, "尝试购买:$price, 数量: $qty")
-
-        purchasedCount++
     }
 }
