@@ -81,6 +81,32 @@ fun cropBitmap(rectArea: RectArea, bitmap: Bitmap): Bitmap {
     }
 }
 
+/**
+ * 检测 Bitmap 是否为真实画面（非全黑/全透明）
+ * 采样检测中心点及四个象限点
+ */
+fun isRealFrame(bitmap: Bitmap): Boolean {
+    val w = bitmap.width
+    val h = bitmap.height
+
+    // 采样 5 个点：中心、左上、右上、左下、右下
+    val points = arrayOf(
+        Pair(w / 2, h / 2),
+        Pair(w / 4, h / 4),
+        Pair(3 * w / 4, h / 4),
+        Pair(w / 4, 3 * h / 4),
+        Pair(3 * w / 4, 3 * h / 4)
+    )
+
+    for (point in points) {
+        val pixel = bitmap.getPixel(point.first, point.second)
+        // 在 RGBA_8888 中，如果 pixel 不为 0，说明该点有颜色或透明度
+        if (pixel != 0) return true
+    }
+
+    return false
+}
+
 /***
  * 发送喵提醒
  * id: 用户id

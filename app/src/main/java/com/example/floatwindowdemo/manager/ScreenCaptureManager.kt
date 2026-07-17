@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import androidx.core.graphics.createBitmap
+import com.example.floatwindowdemo.utils.isRealFrame
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
@@ -81,7 +82,14 @@ object ScreenCaptureManager {
                         val bitmap = processImage(image, width, height)
 
                         // 2. 发送图像。如果消费者处理慢，旧的会被自动挤掉并触发 recycle
-                        _frameChannel.trySend(bitmap)
+                        if (isRealFrame(bitmap)) {
+                            // 只有真实画面才发送
+                            _frameChannel.trySend(bitmap)
+                        } else {
+                            // 如果是黑帧，直接回收，不发送
+                            bitmap.recycle()
+                            // Log.d(TAG, "检测到初始黑帧，已拦截")
+                        }
 
                     } catch (e: Exception) {
                         Log.e(TAG, "画面处理异常: ${e.message}")
