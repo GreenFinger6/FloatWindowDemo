@@ -6,9 +6,11 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.utils.Auction
+import com.example.floatwindowdemo.utils.Dungeon
 import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.SequenceClicker
 import com.example.floatwindowdemo.utils.YoloUtil
+import com.example.floatwindowdemo.utils.cropBitmap
 import kotlinx.coroutines.*
 
 class ScriptExecutor(
@@ -100,10 +102,12 @@ class ScriptExecutor(
 
     fun showAllText() {
         runStreamingTask { bitmap ->
+            val priceBitmap = cropBitmap(Dungeon.Regions.TOWN_STAMINA, bitmap)
             val text = withContext(Dispatchers.Default) {
-                OcrManager.recognizeTextAsync(bitmap)
+                OcrManager.recognizeTextAsync(priceBitmap)
             }
             Log.d(TAG, "📝 识别内容: ${text.replace("\n", " ")}")
+            priceBitmap.recycle()
         }
     }
 
@@ -121,7 +125,7 @@ class ScriptExecutor(
      */
     fun startAuction() {
         // 状态识别模版预加载
-        OpencvUtil.preloadTemplates(context, Auction.templateList)
+        OpencvUtil.preloadTemplates(context, Auction.stateTemplateList)
         // 购买识别模版加载
         OpencvUtil.preloadTemplates(context, Auction.buyList)
         val auction = AuctionManager(context)

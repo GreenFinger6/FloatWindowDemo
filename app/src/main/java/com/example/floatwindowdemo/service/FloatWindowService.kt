@@ -178,14 +178,11 @@ class FloatWindowService : Service() {
                     }
                     2 -> {
                         // test
-                        scriptExecutor.saveScreen()
+                        // scriptExecutor.saveScreen()
                         // scriptExecutor.execute()
+                         scriptExecutor.showAllText()
                     }
                 }
-                val taskList = listOf("开始游戏","选角", "game")
-                // scriptExecutor.execute(taskList)
-                // scriptExecutor.showText()
-                // scriptExecutor.showBitMap()
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()

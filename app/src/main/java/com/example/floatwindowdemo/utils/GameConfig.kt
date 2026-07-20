@@ -3,6 +3,8 @@ package com.example.floatwindowdemo.utils
 /**
  * 统一管理游戏静态常量( 1237*720 分辨率下)
  */
+// 定义一个简单的区域数据类
+data class RectArea(val x1: Float, val y1: Float, val x2: Float, val y2: Float)
 
 // 拍卖行相关常量
 object Auction {
@@ -25,8 +27,8 @@ object Auction {
         val MIN_PRICE = RectArea(0.1148f, 0.3708f, 0.4770f, 0.4556f)
     }
 
-    // 涉及的相关模版
-    val templateList = listOf(
+    // 涉及的状态检测相关模版
+    val stateTemplateList = listOf(
         "state_auction_purchase", //判断购买页面
         "state_auction_detail"  //判断商品详情
     )
@@ -38,5 +40,20 @@ object Auction {
     )
 }
 
-// 定义一个简单的区域数据类
-data class RectArea(val x1: Float, val y1: Float, val x2: Float, val y2: Float)
+// 深渊相关
+object Dungeon {
+    object Buttons {
+        val Attack = Pair(0.8618f, 0.8847f) // 攻击
+    }
+    object Regions {
+        // 城镇体力识别区域
+        val TOWN_STAMINA = RectArea(0.1221f, 0.0861f, 0.1762f, 0.1111f)
+        // 战斗体力识别区域
+        val BATTLE_STAMINA = RectArea(0.1067f, 0.0806f, 0.1989f, 0.1208f)
+    }
+    // 涉及的状态检测相关模版
+    val stateTemplateList = listOf(
+        "state_auction_purchase", //判断购买页面
+        "state_auction_detail"  //判断商品详情
+    )
+}

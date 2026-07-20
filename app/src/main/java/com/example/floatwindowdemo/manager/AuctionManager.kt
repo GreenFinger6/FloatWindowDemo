@@ -65,8 +65,8 @@ class AuctionManager(private val context: Context) {
      */
     suspend fun detectCurrentState(bitmap: Bitmap): AuctionState = withContext(Dispatchers.Default) {
         // 1. 获取模板
-        val template1 = OpencvUtil.templateCache[Auction.templateList[0]]
-        val template2 = OpencvUtil.templateCache[Auction.templateList[1]]
+        val template1 = OpencvUtil.templateCache[Auction.stateTemplateList[0]]
+        val template2 = OpencvUtil.templateCache[Auction.stateTemplateList[1]]
 
         if (template1 == null || template2 == null){
             Log.e(TAG,"状态模版加载失败")
