@@ -30,7 +30,6 @@ object OcrManager {
                 continuation.resume("")
             }
     }
-
     /**
      * 在图片中查找特定关键字并返回第一个找到的中心坐标（挂起函数版）
      * @param bitmap 图片

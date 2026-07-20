@@ -11,7 +11,9 @@ import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.SequenceClicker
 import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.cropBitmap
+import com.example.floatwindowdemo.utils.extractStamina
 import kotlinx.coroutines.*
+import androidx.core.graphics.scale
 
 class ScriptExecutor(
     private val context: Context,
@@ -90,10 +92,10 @@ class ScriptExecutor(
      * 执行一系列点击任务
      */
     fun execute() {
-        OpencvUtil.preloadTemplates(context, Auction.buyList)
+        OpencvUtil.preloadTemplates(context, Dungeon.entryDungeon)
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
-            if (SequenceClicker.runSequence(Auction.buyList)) {
+            if (SequenceClicker.runSequence(Dungeon.entryDungeon)) {
                 onStatusUpdate("任务序列已执行完毕")
                 stop()
             }
@@ -102,11 +104,12 @@ class ScriptExecutor(
 
     fun showAllText() {
         runStreamingTask { bitmap ->
-            val priceBitmap = cropBitmap(Dungeon.Regions.TOWN_STAMINA, bitmap)
+            val priceBitmap = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
             val text = withContext(Dispatchers.Default) {
                 OcrManager.recognizeTextAsync(priceBitmap)
             }
             Log.d(TAG, "📝 识别内容: ${text.replace("\n", " ")}")
+            Log.d(TAG, "📝 当前体力: ${extractStamina(text)}")
             priceBitmap.recycle()
         }
     }

@@ -56,6 +56,48 @@ fun extractQuantity(text: String): Long {
     return match.replace(",", "").toLongOrNull() ?: 0L
 }
 
+/**
+ * 提取当前体力值逻辑：
+ * @return 成功返回当前体力(Int)，识别失败或格式错误返回 -1
+ */
+/**
+ * 提取当前体力值：处理 O/0 混淆，并提取当前值
+ */
+fun extractStamina(text: String): Int {
+    if (text.isBlank()) return -1
+
+    // 1. 字符纠错：将字母 O 替换为数字 0 (解决 O100 问题)
+    val correctedText = text.replace("O", "0")
+        .replace("o", "0")
+        .replace("I", "1")
+        .replace("l", "1")
+
+    // 2. 清洗：去掉除了数字和斜杠以外的一切字符
+    val cleanText = correctedText.replace(Regex("[^0-9/]"), "")
+
+    // 3. 情况 A：有斜杠 (例如 "0/100" 或 "120/100")
+    if (cleanText.contains("/")) {
+        val parts = cleanText.split("/")
+        if (parts.isNotEmpty()) {
+            return parts[0].takeLast(3).toIntOrNull() ?: -1
+        }
+    }
+
+    // 4. 情况 B：没斜杠粘连了 (例如 "0100" 或 "120100")
+    // 正则：匹配 1-3 位数字 + 后缀固定的 100
+    val stickyRegex = Regex("""(\d{1,3})(100)$""")
+    val matchResult = stickyRegex.find(cleanText)
+    if (matchResult != null) {
+        return matchResult.groupValues[1].toIntOrNull() ?: -1
+    }
+
+    // 5. 情况 C：极其简略的单数值
+    if (cleanText.length in 1..3) {
+        return cleanText.toIntOrNull() ?: -1
+    }
+
+    return -1
+}
 
 // 裁剪 Bitmap 的专业处理
 fun cropBitmap(rectArea: RectArea, bitmap: Bitmap): Bitmap {

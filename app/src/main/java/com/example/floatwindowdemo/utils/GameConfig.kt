@@ -47,13 +47,22 @@ object Dungeon {
     }
     object Regions {
         // 城镇体力识别区域
-        val TOWN_STAMINA = RectArea(0.1221f, 0.0861f, 0.1762f, 0.1111f)
+        val TOWN_STAMINA = RectArea(0.1213f, 0.0764f, 0.1770f, 0.125f)
         // 战斗体力识别区域
-        val BATTLE_STAMINA = RectArea(0.1067f, 0.0806f, 0.1989f, 0.1208f)
+        val BATTLE_STAMINA = RectArea(0.1277f, 0.0708f,  0.2021f, 0.1292f)
     }
     // 涉及的状态检测相关模版
     val stateTemplateList = listOf(
         "state_auction_purchase", //判断购买页面
         "state_auction_detail"  //判断商品详情
+    )
+
+    // 进入深渊
+    val entryDungeon = listOf(
+        "button_task", //委托
+        "button_dungeon",  //深渊
+        "button_confirm", //确认
+        "button_dungeon1",  //深渊1
+        "button_entry",  //入场
     )
 }
