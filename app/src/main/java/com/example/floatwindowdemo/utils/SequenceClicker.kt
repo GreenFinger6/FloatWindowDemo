@@ -86,8 +86,6 @@ object SequenceClicker {
                     return@withTimeoutOrNull false
                 }
             }
-
-            Log.d(TAG, "所有序列任务已成功执行完毕")
             true
         } ?: run {
             Log.e(TAG, "序列执行超时！已自动释放控制权")

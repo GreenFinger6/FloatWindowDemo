@@ -7,7 +7,9 @@ import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 游戏状态枚举
@@ -133,16 +135,23 @@ class GameManager(private val context: Context) {
         var tmp = targetHero
         // 切换目标角色
         Log.d(TAG,"选择角色${tmp+1}")
+
+        // 检测是否在角色选择界面
+        if(!SequenceClicker.waitForImage(Dungeon.TPL_START_GAME))return false
+
         while (tmp >= 5){
             // 下移到下一栏角色
             AutomationService.instance?.swipe(Pair(0.4979f, 0.8490f), Pair(0.4979f, 0.1490f), 2000)
             tmp -= 5
         }
-        delay(UI_CD)
+        delay(UI_CD*4)
 
         // 选择对应角色
         val heroButton = Dungeon.Buttons.SelectHeroList[tmp]
-        AutomationService.instance?.doubleClick(heroButton.first,heroButton.second)
+        AutomationService.instance?.click(heroButton.first,heroButton.second)
+
+        // 开始游戏
+        SequenceClicker.runSequence(listOf(Dungeon.TPL_START_GAME))
 
         // 检测是否出现委托
         return SequenceClicker.waitForImage(Dungeon.TPL_TASK_MENU)
@@ -154,20 +163,55 @@ class GameManager(private val context: Context) {
      */
     suspend fun backSelectHero() : Boolean{
         Log.d(TAG, "返回角色选择")
-        // 点击设置
-        val settingsPos = Pair(0.95f, 0.05f)
-        AutomationService.instance?.click(settingsPos.first, settingsPos.second)
-        delay(UI_CD) // 等待菜单弹出
 
-        // 选择角色
-        val selectHeroStepSuccess = SequenceClicker.runSequence(listOf("btn_select_hero"))
-        if (!selectHeroStepSuccess) {
-            // 如果模板识别不到，兜底使用固定位置点击（假设坐标如下）
-            Log.w(TAG, "模板识别失败，尝试固定位置点击选择角色")
-            AutomationService.instance?.click(0.5f, 0.6f)
+        // 检测是否在城镇
+        if (!SequenceClicker.waitForImage(Dungeon.TPL_TASK_MENU)) {
+            Log.e(TAG, "不在城镇界面，无法返回角色选择")
+            return false
+        }
+        delay(UI_CD*4) // 等待游戏加载
+
+        // 点击设置
+        // 2. 闭环操作：循环点击“设置”，直到“选择角色”按钮出现
+        val isMenuOpened = withTimeoutOrNull(15000L) { // 设置15秒总超时
+            var found = false
+            while (!found) {
+                Log.d(TAG, "尝试点击设置按钮...")
+                // 执行固定坐标点击
+                AutomationService.instance?.click(Dungeon.Buttons.Settings)
+
+                // 给 UI 反应时间（比如 1 秒），然后抽帧检查菜单是否弹出
+                delay(1000L)
+
+                val frame = ScreenCaptureManager.frameFlow.first()
+                try {
+                    val tplSelectHero = OpencvUtil.templateCache[Dungeon.TPL_SELECT_HERO]
+                    if (tplSelectHero != null) {
+                        // 在后台线程匹配“选择角色”按钮
+                        val loc = withContext(Dispatchers.Default) {
+                            OpencvUtil.findImage(frame, tplSelectHero)
+                        }
+                        if (loc != null) {
+                            Log.d(TAG, "菜单已成功打开，检测到选择角色按钮")
+                            found = true
+                        }
+                    }
+                } finally {
+                    frame.recycle() // 必须回收
+                }
+            }
+            true
+        } ?: false
+
+        if (!isMenuOpened) {
+            Log.e(TAG, "尝试打开设置菜单超时，可能发生卡顿或界面异常")
+            return false
         }
 
+        // 选择角色
+        SequenceClicker.runSequence(listOf(Dungeon.TPL_SELECT_HERO))
+
         // 检测是否成功切换
-        return SequenceClicker.waitForImage("btn_select_hero")
+        return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME)
     }
 }

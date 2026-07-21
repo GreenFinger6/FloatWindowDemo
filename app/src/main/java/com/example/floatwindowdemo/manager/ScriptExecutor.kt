@@ -122,12 +122,19 @@ class ScriptExecutor(
         }
     }
     fun test(){
+        OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         val auction = GameManager(context)
         runStreamingTask { bitmap ->
             // 保存图片
-            auction.switchHero(10)
-            onStatusUpdate("测试任务已完成")
-            stop()
+            if(!auction.switchHero(12)){
+                onStatusUpdate("测试任务已完成")
+                stop()
+            }
+            if(!auction.backSelectHero()){
+                onStatusUpdate("测试任务已完成")
+                stop()
+            }
+
         }
     }
     /**

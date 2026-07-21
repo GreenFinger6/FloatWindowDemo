@@ -44,6 +44,7 @@ object Auction {
 object Dungeon {
     object Buttons {
         val Attack = Pair(0.8618f, 0.8847f) // 攻击
+        val Settings = Pair(0.9466f, 0.1819f) // 设置
 
         // 角色选择界面，每个角色的坐标
         val SelectHeroList = listOf(
@@ -70,6 +71,8 @@ object Dungeon {
     const val TPL_CONFIRM = "button_confirm"           // 确认
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
     const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
+    const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
+    const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
 
     // 涉及的状态检测相关模版
     val allTemplates = listOf(
@@ -79,7 +82,9 @@ object Dungeon {
         TPL_DUNGEON_TAB,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
-        TPL_ENTRY_GATE
+        TPL_ENTRY_GATE,
+        TPL_START_GAME,
+        TPL_SELECT_HERO
     )
 
     // 进入深渊
