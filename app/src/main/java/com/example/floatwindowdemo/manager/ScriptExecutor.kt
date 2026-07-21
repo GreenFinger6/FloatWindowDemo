@@ -145,6 +145,7 @@ class ScriptExecutor(
     fun startTask() {
         // 状态识别模版预加载
         OpencvUtil.preloadTemplates(context, Dungeon.stateTemplateList)
+        OpencvUtil.preloadTemplates(context, Dungeon.entryDungeon)
         val dungeon = GameManager(context)
         runStreamingTask { bitmap ->
             if (dungeon.onFrame(bitmap)) {

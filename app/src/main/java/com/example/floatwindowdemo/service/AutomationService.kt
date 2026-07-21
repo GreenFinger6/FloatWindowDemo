@@ -27,7 +27,8 @@ class AutomationService : AccessibilityService() {
     /**
      * 在屏幕指定坐标执行点击
      */
-    fun click(x: Float, y: Float, duration: Long = 50L) {
+    suspend fun click(x: Float, y: Float, duration: Long = 50L): Boolean =
+        suspendCancellableCoroutine { continuation ->
         // 获取当前屏幕的绝对像素宽高
         val metrics = resources.displayMetrics
         val screenWidth = metrics.widthPixels
@@ -37,8 +38,10 @@ class AutomationService : AccessibilityService() {
         val finalX = if (x in 0f..1f) x * screenWidth else x
         val finalY = if (y in 0f..1f) y * screenHeight else y
 
-        val path = Path()
-        path.moveTo(finalX, finalY)
+        val path = Path().apply {
+            moveTo(finalX, finalY)
+            lineTo(finalX, finalY)
+        }
 
         // 构建点击手势
         val gesture = GestureDescription.Builder()
@@ -47,18 +50,18 @@ class AutomationService : AccessibilityService() {
 
         dispatchGesture(gesture, object : GestureResultCallback() {
             override fun onCompleted(gestureDescription: GestureDescription?) {
-                super.onCompleted(gestureDescription)
+                if (continuation.isActive) continuation.resume(true)
                 // 这里可以添加点击后的日志或回调
             }
-            override fun onCancelled(gestureDescription: android.accessibilityservice.GestureDescription?) {
-                super.onCancelled(gestureDescription)
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                if (continuation.isActive) continuation.resume(false)
                 // 如果你拖动时没静默，这里会疯狂报错
                 android.util.Log.e("Automation", "点击被取消: 可能是由于物理触摸冲突")
             }
         }, null)
     }
 
-    fun click(t: Pair<Float, Float>, duration: Long = 50L) = click(t.first, t.second, duration)
+    suspend fun click(t: Pair<Float, Float>, duration: Long = 50L) = click(t.first, t.second, duration)
 
     /**
      * 在屏幕上执行滑动/拖动

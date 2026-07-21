@@ -177,9 +177,9 @@ class FloatWindowService : Service() {
                         scriptExecutor.startTask()
                     }
                     2 -> {
-                        // test
+                        scriptExecutor.saveScreen()
                         // scriptExecutor.saveScreen()
-                        scriptExecutor.execute()
+                        // scriptExecutor.execute()
                         //scriptExecutor.showAllText()
                     }
                 }

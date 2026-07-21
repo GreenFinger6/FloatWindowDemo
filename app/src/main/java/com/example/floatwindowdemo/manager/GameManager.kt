@@ -15,95 +15,112 @@ import kotlinx.coroutines.withContext
  */
 enum class GameState {
     TOWN,       // 城镇：准备进图、换号
-    BATTLE_FIGHTING,// 战斗中：执行战斗逻辑
-    BATTLE_FINISHED,// 战斗结束：下一关or返回城镇
+    BATTLE,     // 战斗中
     RECOVERY    // 异常恢复：处理弹窗或卡死
 }
 
 class GameManager(private val context: Context) {
     private val TAG = "GameManager"
-    private var takeNext = false
+    private var isTown = true // 是否在城镇
+    private var takeNext = false // 是否可以再次挑战
 
     /**
      * 每一帧的入口
      */
     suspend fun onFrame(bitmap: Bitmap): Boolean {
-
-        // 逻辑终点: 所有角色任务完成
-
-        // FSM状态判定
-        val priceBitmap = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
-        val text = withContext(Dispatchers.Default) {
-            OcrManager.recognizeTextAsync(priceBitmap)
-        }
-        if(text.contains("拾取道具")){
-            takeNext = true
-        }
-        val template1 = OpencvUtil.templateCache[Dungeon.stateTemplateList[0]]
-        val template2 = OpencvUtil.templateCache[Dungeon.stateTemplateList[1]]
-        if (template1 == null || template2 == null){
-            Log.e(TAG,"状态模版加载失败")
-            return false
-        }
-        val again = OpencvUtil.findImage(bitmap, template1)
-        val back = OpencvUtil.findImage(bitmap, template2)
-        if(takeNext && !text.contains("拾取道具")){
-            // 此时刚打完一轮
-            if(again!=null) AutomationService.instance?.click(again.x.toFloat(), again.y.toFloat())
-            else if(back!=null) {
-                // 结束一轮
-                AutomationService.instance?.click(back.x.toFloat(), back.y.toFloat())
-                return true
+        val state = detectCurrentState()
+        when (state) {
+            GameState.BATTLE -> autoBattle(bitmap)
+            GameState.TOWN -> {
+                if (autoBattle(bitmap))return true
             }
-            else AutomationService.instance?.click(Dungeon.Buttons.Attack, 500L)
-        }else AutomationService.instance?.click(Dungeon.Buttons.Attack,500L)
+            else -> {}
+        }
         return false
     }
+    /**
+     * 状态判定
+     */
+    private fun detectCurrentState(): GameState{
+        if (isTown){
+            return GameState.TOWN
+        }else return GameState.BATTLE
+    }
 
     /**
-     * 识别当前是处于城镇还是战斗
-     * 建议：城镇识别 UI 上的“地图”按钮，战斗识别 UI 上的“技能按键”或“血条”
+     * 处理战斗场景
      */
-    private suspend fun detectCurrentState(bitmap: Bitmap): GameState = withContext(Dispatchers.Default) {
-        // 使用模板匹配识别状态特征
-        val townTemplate = OpencvUtil.templateCache["ui_map_icon"] // 城镇特有图标
-        val battleTemplate = OpencvUtil.templateCache["ui_skill_icon"] // 战斗特有图标
-
-        if (townTemplate == null || battleTemplate == null) return@withContext GameState.RECOVERY
-
-        val isTown = async { OpencvUtil.findImage(bitmap, townTemplate) }
-        val isBattle = async { OpencvUtil.findImage(bitmap, battleTemplate) }
-
-        when {
-            isBattle.await() != null -> GameState.BATTLE_FIGHTING
-            isTown.await() != null -> GameState.TOWN
-            else -> GameState.RECOVERY
+    private suspend fun autoBattle (bitmap: Bitmap) : Boolean{
+        // 使用 try-finally 确保裁剪的 Bitmap 无论如何都会被回收
+        val roi = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
+        val currentHasPickUp = try {
+            val text = withContext(Dispatchers.Default) {
+                OcrManager.recognizeTextAsync(roi)
+            }
+            if (text.contains("拾取道具")) {
+                takeNext = true
+                Log.d(TAG, "检测到拾取提示，标记战役结束")
+            }
+            text.contains("拾取道具")
+        } finally {
+            roi.recycle() // 必须回收！防止 Native 内存溢出
         }
-    }
 
-    /**
-     * 城镇状态逻辑
-     */
-    private suspend fun handleTownState(bitmap: Bitmap) {
-        // 示例：如果需要进图，这里调用具体的进图方法
-        // enterDungeon()
-        Log.d(TAG, "当前在城镇...")
-    }
+        // 2. 核心图像识别 (按钮匹配)
+        // 将 OpenCV 耗时匹配移至 Dispatchers.Default 执行
+        return withContext(Dispatchers.Default) {
+            val tplAgain = OpencvUtil.templateCache[Dungeon.stateTemplateList[0]]
+            val tplBack = OpencvUtil.templateCache[Dungeon.stateTemplateList[1]]
+            val tplConfirm = OpencvUtil.templateCache["button_confirm"]
 
-    /**
-     * 战斗状态逻辑
-     */
-    private suspend fun handleBattleState(bitmap: Bitmap) {
-        // 示例：调用 YOLO 识别怪物并攻击
-        // executeCombat(bitmap)
-        Log.d(TAG, "正在战斗中...")
-    }
+            if (tplAgain == null || tplBack == null || tplConfirm == null) {
+                Log.e(TAG, "状态模版缺失，跳过本帧")
+                return@withContext false
+            }
 
-    /**
-     * 异常恢复
-     */
-    private suspend fun handleRecovery() {
-        Log.w(TAG, "未知状态，尝试按返回键...")
-        delay(1000)
+            val againLoc = OpencvUtil.findImage(bitmap, tplAgain)
+            val backLoc = OpencvUtil.findImage(bitmap, tplBack)
+            val confirmLoc = OpencvUtil.findImage(bitmap, tplConfirm)
+
+            // 3. 业务决策逻辑 (分支流转)
+            when {
+                // 优先级 1: 全局确认弹窗（如网络断开或体力不足）
+                confirmLoc != null -> {
+                    AutomationService.instance?.click(confirmLoc.x.toFloat(), confirmLoc.y.toFloat())
+                    false
+                }
+
+                // 优先级 2: 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
+                takeNext && !currentHasPickUp -> {
+                    when {
+                        againLoc != null -> {
+                            Log.i(TAG, "点击：再次挑战")
+                            AutomationService.instance?.click(againLoc.x.toFloat(), againLoc.y.toFloat())
+                            takeNext = false // 重置状态
+                            delay(500)      // 点击后稍微缓冲
+                            false
+                        }
+                        backLoc != null -> {
+                            Log.i(TAG, "点击：返回城镇")
+                            AutomationService.instance?.click(backLoc.x.toFloat(), backLoc.y.toFloat())
+                            takeNext = false
+                            true // 告知 Service 任务切换回城镇模式
+                        }
+                        else -> {
+                            // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
+                            AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
+                            false
+                        }
+                    }
+                }
+
+                // 优先级 3: 正常战斗/寻路阶段
+                else -> {
+                    // 调用挂起式长按，此时协程会挂起 2s，collect 会自动跳过期间的帧
+                    AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
+                    false
+                }
+            }
+        }
     }
 }
