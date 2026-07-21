@@ -60,18 +60,34 @@ object Dungeon {
         // 战斗体力识别区域
         val BATTLE_STAMINA = RectArea(0.1277f, 0.0708f,  0.2021f, 0.1292f)
     }
+
+
+    // 状态检测类模板
+    const val TPL_RE_CHALLENGE = "button_re_challenge" // 再次挑战
+    const val TPL_BACK_2_TOWN = "button_back2town"     // 返回城镇
+    const val TPL_TASK_MENU = "button_task"            // 委托菜单
+    const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊切页
+    const val TPL_CONFIRM = "button_confirm"           // 确认
+    const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
+    const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
+
     // 涉及的状态检测相关模版
-    val stateTemplateList = listOf(
-        "button_re_challenge", //再次挑战
-        "button_back2town"  //返回城镇
+    val allTemplates = listOf(
+        TPL_RE_CHALLENGE,
+        TPL_BACK_2_TOWN,
+        TPL_TASK_MENU,
+        TPL_DUNGEON_TAB,
+        TPL_CONFIRM,
+        TPL_DUNGEON_SELECT,
+        TPL_ENTRY_GATE
     )
 
     // 进入深渊
-    val entryDungeon = listOf(
-        "button_task", //委托
-        "button_dungeon",  //深渊
-        "button_confirm", //确认
-        "button_dungeon1",  //深渊1
-        "button_entry",  //入场
+    val entrySequence = listOf(
+        TPL_TASK_MENU,
+        TPL_DUNGEON_TAB,
+        TPL_CONFIRM,
+        TPL_DUNGEON_SELECT,
+        TPL_ENTRY_GATE
     )
 }

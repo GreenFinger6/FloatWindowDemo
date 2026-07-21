@@ -6,11 +6,8 @@ import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 游戏状态枚举
@@ -73,9 +70,9 @@ class GameManager(private val context: Context) {
         // 2. 核心图像识别 (按钮匹配)
         // 将 OpenCV 耗时匹配移至 Dispatchers.Default 执行
         return withContext(Dispatchers.Default) {
-            val tplAgain = OpencvUtil.templateCache[Dungeon.stateTemplateList[0]]
-            val tplBack = OpencvUtil.templateCache[Dungeon.stateTemplateList[1]]
-            val tplConfirm = OpencvUtil.templateCache["button_confirm"]
+            val tplAgain = OpencvUtil.templateCache[Dungeon.TPL_RE_CHALLENGE]
+            val tplBack = OpencvUtil.templateCache[Dungeon.TPL_BACK_2_TOWN]
+            val tplConfirm = OpencvUtil.templateCache[Dungeon.TPL_CONFIRM]
 
             if (tplAgain == null || tplBack == null || tplConfirm == null) {
                 Log.e(TAG, "状态模版缺失，跳过本帧")
@@ -148,7 +145,7 @@ class GameManager(private val context: Context) {
         AutomationService.instance?.doubleClick(heroButton.first,heroButton.second)
 
         // 检测是否出现委托
-        return SequenceClicker.waitForImage("btn_select_hero")
+        return SequenceClicker.waitForImage(Dungeon.TPL_TASK_MENU)
     }
 
     /**

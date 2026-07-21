@@ -91,10 +91,10 @@ class ScriptExecutor(
      * 执行一系列点击任务
      */
     fun execute() {
-        OpencvUtil.preloadTemplates(context, Dungeon.entryDungeon)
+        OpencvUtil.preloadTemplates(context, Dungeon.entrySequence)
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
-            if (SequenceClicker.runSequence(Dungeon.entryDungeon)) {
+            if (SequenceClicker.runSequence(Dungeon.entrySequence)) {
                 onStatusUpdate("任务序列已执行完毕")
                 stop()
             }
@@ -152,8 +152,7 @@ class ScriptExecutor(
      */
     fun startTask() {
         // 状态识别模版预加载
-        OpencvUtil.preloadTemplates(context, Dungeon.stateTemplateList)
-        OpencvUtil.preloadTemplates(context, Dungeon.entryDungeon)
+        OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         val dungeon = GameManager(context)
         runStreamingTask { bitmap ->
             if (dungeon.onFrame(bitmap)) {
