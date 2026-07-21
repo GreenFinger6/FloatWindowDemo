@@ -22,7 +22,7 @@ enum class GameState {
 
 class GameManager(private val context: Context) {
     private val TAG = "GameManager"
-
+    private var takeNext = false
 
     /**
      * 每一帧的入口
@@ -32,15 +32,31 @@ class GameManager(private val context: Context) {
         // 逻辑终点: 所有角色任务完成
 
         // FSM状态判定
-        val state = detectCurrentState(bitmap)
-
-        when (state) {
-            GameState.BATTLE_FIGHTING -> handleBattleState(bitmap)
-            GameState.BATTLE_FINISHED -> handleBattleState(bitmap)
-            GameState.TOWN -> handleTownState(bitmap)
-            GameState.RECOVERY -> handleRecovery()
+        val priceBitmap = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
+        val text = withContext(Dispatchers.Default) {
+            OcrManager.recognizeTextAsync(priceBitmap)
         }
-
+        if(text.contains("拾取道具")){
+            takeNext = true
+        }
+        val template1 = OpencvUtil.templateCache[Dungeon.stateTemplateList[0]]
+        val template2 = OpencvUtil.templateCache[Dungeon.stateTemplateList[1]]
+        if (template1 == null || template2 == null){
+            Log.e(TAG,"状态模版加载失败")
+            return false
+        }
+        val again = OpencvUtil.findImage(bitmap, template1)
+        val back = OpencvUtil.findImage(bitmap, template2)
+        if(takeNext && !text.contains("拾取道具")){
+            // 此时刚打完一轮
+            if(again!=null) AutomationService.instance?.click(again.x.toFloat(), again.y.toFloat())
+            else if(back!=null) {
+                // 结束一轮
+                AutomationService.instance?.click(back.x.toFloat(), back.y.toFloat())
+                return true
+            }
+            else AutomationService.instance?.click(Dungeon.Buttons.Attack, 500L)
+        }else AutomationService.instance?.click(Dungeon.Buttons.Attack,500L)
         return false
     }
 

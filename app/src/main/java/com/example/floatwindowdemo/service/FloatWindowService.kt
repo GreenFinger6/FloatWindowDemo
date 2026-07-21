@@ -174,7 +174,7 @@ class FloatWindowService : Service() {
                     }
                     1 -> {
                         // 调用多角色任务方法
-                        scriptExecutor.runYoloTask()
+                        scriptExecutor.startTask()
                     }
                     2 -> {
                         // test

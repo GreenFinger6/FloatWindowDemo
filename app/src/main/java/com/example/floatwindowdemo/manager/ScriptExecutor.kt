@@ -13,7 +13,6 @@ import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.cropBitmap
 import com.example.floatwindowdemo.utils.extractStamina
 import kotlinx.coroutines.*
-import androidx.core.graphics.scale
 
 class ScriptExecutor(
     private val context: Context,
@@ -139,6 +138,22 @@ class ScriptExecutor(
             }
         }
     }
+
+    /**
+     * 自动过图
+     */
+    fun startTask() {
+        // 状态识别模版预加载
+        OpencvUtil.preloadTemplates(context, Dungeon.stateTemplateList)
+        val dungeon = GameManager(context)
+        runStreamingTask { bitmap ->
+            if (dungeon.onFrame(bitmap)) {
+                onStatusUpdate("任务完成")
+                stop()
+            }
+        }
+    }
+
 
     fun runYoloTask() {
         val initSuccess = YoloUtil.initModel(context.assets)

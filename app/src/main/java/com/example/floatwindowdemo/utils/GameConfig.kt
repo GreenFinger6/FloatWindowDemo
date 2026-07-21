@@ -53,8 +53,8 @@ object Dungeon {
     }
     // 涉及的状态检测相关模版
     val stateTemplateList = listOf(
-        "state_auction_purchase", //判断购买页面
-        "state_auction_detail"  //判断商品详情
+        "button_re_challenge", //再次挑战
+        "button_back2town"  //返回城镇
     )
 
     // 进入深渊

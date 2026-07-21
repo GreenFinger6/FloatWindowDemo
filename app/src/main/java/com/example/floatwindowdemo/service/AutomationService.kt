@@ -27,7 +27,7 @@ class AutomationService : AccessibilityService() {
     /**
      * 在屏幕指定坐标执行点击
      */
-    fun click(x: Float, y: Float) {
+    fun click(x: Float, y: Float, duration: Long = 50L) {
         // 获取当前屏幕的绝对像素宽高
         val metrics = resources.displayMetrics
         val screenWidth = metrics.widthPixels
@@ -42,7 +42,7 @@ class AutomationService : AccessibilityService() {
 
         // 构建点击手势
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
+            .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
             .build()
 
         dispatchGesture(gesture, object : GestureResultCallback() {
@@ -58,9 +58,7 @@ class AutomationService : AccessibilityService() {
         }, null)
     }
 
-    fun click(x: Int, y: Int) = click(x.toFloat(), y.toFloat())
-    fun click(x: Double, y: Double) = click(x.toFloat(), y.toFloat())
-    fun click(t: Pair<Float, Float>) = click(t.first, t.second)
+    fun click(t: Pair<Float, Float>, duration: Long = 50L) = click(t.first, t.second, duration)
 
     /**
      * 在屏幕上执行滑动/拖动
