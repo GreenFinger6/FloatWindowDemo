@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -23,19 +25,56 @@ enum class GameState {
 class GameManager(private val context: Context) {
     private val TAG = "GameManager"
     private var isTown = true // 是否在城镇
-    private var takeNext = false // 是否可以再次挑战
-
-    private val UI_CD = 500L // UI延迟，ms
-
+    private val UI_CD = 500L    // UI延迟，ms
+    private var countHero = -1   // 当前角色下标
+    private val roleList: List<RoleData> = Gson().fromJson(ConfigManager.getRoleDataJson(context), object : TypeToken<List<RoleData>>() {}.type)
     /**
      * 每一帧的入口
      */
     suspend fun onFrame(bitmap: Bitmap): Boolean {
+        // 逻辑出口：所有角色任务执行完毕
+        if(countHero > roleList.size) return true
+
+        // 全局拦截器：优先处理确认弹窗（防止其阻塞所有逻辑）
+        val tplConfirm = OpencvUtil.templateCache[Dungeon.TPL_CONFIRM]
+        if (tplConfirm != null) {
+            val confirmLoc = withContext(Dispatchers.Default) {
+                OpencvUtil.findImage(bitmap, tplConfirm)
+            }
+            if (confirmLoc != null) {
+                Log.d(TAG, "检测到确认弹窗，优先点击处理")
+                AutomationService.instance?.click(confirmLoc.x.toFloat(), confirmLoc.y.toFloat())
+                // 处理了弹窗后，本帧直接返回，不执行后续状态逻辑，等下一帧环境“干净”后再检测
+                return false
+            }
+        }
+
+
+        // 3. 状态分发逻辑
         val state = detectCurrentState()
         when (state) {
-            GameState.BATTLE -> autoBattle(bitmap)
+            GameState.BATTLE -> {
+                if(autoBattle(bitmap)){ // 当前角色战斗结束
+                    // 返回角色选择界面
+                    backSelectHero()
+                    // 切换状态
+                    isTown = true
+                }
+            }
             GameState.TOWN -> {
-                if (autoBattle(bitmap))return true
+                // 循环向后找启用的角色
+                while (++countHero < roleList.size) {
+                    if (roleList[countHero].isEnabled) {
+                        // 选择下一个启用的角色进入城镇
+                        switchHero(countHero)
+                        // 进入深渊
+                        SequenceClicker.runSequence(Dungeon.entrySequence)
+                        // 切换状态
+                        isTown = false
+                        return false
+                    }
+                }
+                return true
             }
             else -> {}
         }
@@ -60,53 +99,38 @@ class GameManager(private val context: Context) {
             val text = withContext(Dispatchers.Default) {
                 OcrManager.recognizeTextAsync(roi)
             }
-            if (text.contains("拾取道具")) {
-                takeNext = true
-                Log.d(TAG, "检测到拾取提示，标记战役结束")
-            }
             text.contains("拾取道具")
         } finally {
             roi.recycle() // 必须回收！防止 Native 内存溢出
         }
 
-        // 2. 核心图像识别 (按钮匹配)
-        // 将 OpenCV 耗时匹配移至 Dispatchers.Default 执行
         return withContext(Dispatchers.Default) {
             val tplAgain = OpencvUtil.templateCache[Dungeon.TPL_RE_CHALLENGE]
             val tplBack = OpencvUtil.templateCache[Dungeon.TPL_BACK_2_TOWN]
-            val tplConfirm = OpencvUtil.templateCache[Dungeon.TPL_CONFIRM]
 
-            if (tplAgain == null || tplBack == null || tplConfirm == null) {
+
+            if (tplAgain == null || tplBack == null) {
                 Log.e(TAG, "状态模版缺失，跳过本帧")
                 return@withContext false
             }
 
             val againLoc = OpencvUtil.findImage(bitmap, tplAgain)
             val backLoc = OpencvUtil.findImage(bitmap, tplBack)
-            val confirmLoc = OpencvUtil.findImage(bitmap, tplConfirm)
 
             // 3. 业务决策逻辑 (分支流转)
             when {
-                // 优先级 1: 全局确认弹窗（如网络断开或体力不足）
-                confirmLoc != null -> {
-                    AutomationService.instance?.click(confirmLoc.x.toFloat(), confirmLoc.y.toFloat())
-                    false
-                }
-
-                // 优先级 2: 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
-                takeNext && !currentHasPickUp -> {
+                // 优先级 : 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
+                !currentHasPickUp -> {
                     when {
                         againLoc != null -> {
                             Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc.x.toFloat(), againLoc.y.toFloat())
-                            takeNext = false // 重置状态
                             delay(UI_CD)      // 点击后稍微缓冲
                             false
                         }
                         backLoc != null -> {
                             Log.i(TAG, "点击：返回城镇")
                             AutomationService.instance?.click(backLoc.x.toFloat(), backLoc.y.toFloat())
-                            takeNext = false
                             true // 告知 Service 任务切换回城镇模式
                         }
                         else -> {
@@ -117,7 +141,7 @@ class GameManager(private val context: Context) {
                     }
                 }
 
-                // 优先级 3: 正常战斗/寻路阶段
+                // 优先级 : 正常战斗/寻路阶段
                 else -> {
                     // 调用挂起式长按，此时协程会挂起 2s，collect 会自动跳过期间的帧
                     AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
@@ -141,7 +165,7 @@ class GameManager(private val context: Context) {
 
         while (tmp >= 5){
             // 下移到下一栏角色
-            AutomationService.instance?.swipe(Pair(0.4979f, 0.8490f), Pair(0.4979f, 0.1490f), 2000)
+            AutomationService.instance?.swipe(Pair(623f, 508f), Pair(623f, 100f), 1000)
             tmp -= 5
         }
         delay(UI_CD*4)

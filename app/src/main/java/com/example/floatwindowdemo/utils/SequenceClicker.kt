@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.opencv.core.Point
 
 /**
  * 序列点击执行器 - 单例优化版
@@ -23,74 +24,98 @@ object SequenceClicker {
     private const val TOTAL_TIMEOUT = 30000L    // 整个序列执行的绝对超时时间 (30秒)
 
     /**
-     * 执行点击序列（阻塞/挂起直到结束）
+     * 执行点击序列（增强版：点击直到目标消失才继续）
      * @param taskList 模板名称列表
      * @return true 表示全部成功点完，false 表示中途超时或失败
      */
     suspend fun runSequence(taskList: List<String>): Boolean {
-        // 使用 withTimeoutOrNull 防止整个脚本线程因为找不到图像而永久卡死
         return withTimeoutOrNull(TOTAL_TIMEOUT) {
             for (target in taskList) {
-                var consecutiveCount = 0
-                var retryCount = 0
-                var isStepSuccess = false
+                var isStepFinished = false
+                var stepRetryCount = 0
 
-                while (retryCount < MAX_RETRY_PER_STEP) {
-                    // 1. 从单例流中截获最新的一帧
-                    val bitmap = ScreenCaptureManager.frameFlow.first()
+                // 外部大循环：确保该步骤点击并导致 UI 发生变化（目标消失）
+                while (!isStepFinished && stepRetryCount < MAX_RETRY_PER_STEP) {
 
-                    try {
-                        val template = OpencvUtil.templateCache[target]
-                        if (template == null) {
-                            Log.e(TAG, "模板 $target 未在缓存中，请先预加载")
-                            break
-                        }
+                    // 1. 等待目标出现并稳定
+                    val location = findStableTarget(target)
 
-                        // 2. OpenCV 识别（切换到 Default 线程执行计算）
-                        val location = withContext(Dispatchers.Default) {
-                            OpencvUtil.findImage(bitmap, template)
-                        }
+                    if (location != null) {
+                        // 2. 执行点击
+                        Log.d(TAG, "检测到 $target，执行点击并等待其消失...")
+                        AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
 
-                        if (location != null) {
-                            consecutiveCount++
-                            if (consecutiveCount >= STABLE_REQUIRED) {
-                                // 3. 识别稳定，执行点击
-                                Log.d(TAG, "执行点击 $target")
-                                AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
-
-                                isStepSuccess = true
-                                break // 跳出当前步骤的 While 循环
+                        // 3. 核心机制：等待目标消失
+                        // 给 UI 反应时间，每隔 300ms 检查一次，最多检查 5 次
+                        var disappeared = false
+                        for (i in 0 until 5) {
+                            delay(400L) // 每次点击后给点缓冲
+                            val frame = ScreenCaptureManager.frameFlow.first()
+                            val stillThere = try {
+                                val template = OpencvUtil.templateCache[target]
+                                withContext(Dispatchers.Default) {
+                                    if (template != null) OpencvUtil.findImage(frame, template) != null else false
+                                }
+                            } finally {
+                                frame.recycle()
                             }
-                        } else {
-                            consecutiveCount = 0 // 匹配中断，重置稳定计数
-                            retryCount++
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "识别过程发生异常: ${e.message}")
-                    } finally {
-                        // 4. 关键：手动回收通过 first() 拿到的临时 Bitmap
-                        bitmap.recycle()
-                    }
 
-                    // 识别间隔，避免过度消耗 CPU
-                    delay(100L)
+                            if (!stillThere) {
+                                disappeared = true
+                                break
+                            } else {
+                                // 补点一下，防止没点中
+                                AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
+                            }
+                        }
+                        if (disappeared) {
+                            isStepFinished = true
+                        }
+                    } else {
+                        // 没找到目标
+                        stepRetryCount++
+                        delay(200L)
+                    }
                 }
 
-                if (isStepSuccess) {
-                    // 步骤完成，等待 UI 刷新
-                    delay(STEP_DELAY)
-                } else {
-                    Log.e(TAG, "步骤 $target 识别次数过多，强制跳过或结束")
-                    // 如果某一步失败了，可以根据业务需求决定是 return@withTimeoutOrNull false
-                    // 还是继续尝试下一个。这里我们选择直接返回失败。
+                if (!isStepFinished) {
+                    Log.e(TAG, "步骤 $target 超时或失败")
                     return@withTimeoutOrNull false
                 }
+
+                // 步骤间固定 CD，防止转场动画干扰
+                delay(500L)
             }
             true
-        } ?: run {
-            Log.e(TAG, "序列执行超时！已自动释放控制权")
-            false
+        } ?: false
+    }
+
+    /**
+     * 私有辅助：寻找稳定的目标
+     */
+    private suspend fun findStableTarget(targetName: String): Point? {
+        var consecutiveCount = 0
+        val template = OpencvUtil.templateCache[targetName] ?: return null
+
+        for (i in 0 until 20) { // 最多找 20 帧
+            val bitmap = ScreenCaptureManager.frameFlow.first()
+            val loc = try {
+                withContext(Dispatchers.Default) {
+                    OpencvUtil.findImage(bitmap, template)
+                }
+            } finally {
+                bitmap.recycle()
+            }
+
+            if (loc != null) {
+                consecutiveCount++
+                if (consecutiveCount >= STABLE_REQUIRED) return loc
+            } else {
+                consecutiveCount = 0
+            }
+            delay(100L)
         }
+        return null
     }
 
     /**
