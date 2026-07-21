@@ -64,6 +64,22 @@ class AutomationService : AccessibilityService() {
     suspend fun click(t: Pair<Float, Float>, duration: Long = 50L) = click(t.first, t.second, duration)
 
     /**
+     * 执行双击操作
+     * @param interval 两次点击之间的间隔时间，通常 100ms-200ms 是双击的理想区间
+     */
+    suspend fun doubleClick(x: Float, y: Float, interval: Long = 150L): Boolean {
+        // 执行第一次点击
+        val firstClickSuccess = click(x, y, 50L)
+        if (!firstClickSuccess) return false
+
+        // 关键：等待一个短间隔，让系统识别为“双击”而不是两次独立的点击
+        kotlinx.coroutines.delay(interval)
+
+        // 执行第二次点击
+        return click(x, y, 50L)
+    }
+
+    /**
      * 在屏幕上执行滑动/拖动
      * @param start 滑动起始坐标
      * @param end 滑动结束坐标

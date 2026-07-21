@@ -44,6 +44,15 @@ object Auction {
 object Dungeon {
     object Buttons {
         val Attack = Pair(0.8618f, 0.8847f) // 攻击
+
+        // 角色选择界面，每个角色的坐标
+        val SelectHeroList = listOf(
+            Pair(0.1592f, 0.4778f),
+            Pair(0.3333f, 0.4565f),
+            Pair(0.5042f, 0.4796f),
+            Pair(0.6767f, 0.4602f),
+            Pair(0.8529f, 0.4750f),
+        )
     }
     object Regions {
         // 城镇体力识别区域

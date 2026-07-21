@@ -121,7 +121,15 @@ class ScriptExecutor(
             stop()
         }
     }
-
+    fun test(){
+        val auction = GameManager(context)
+        runStreamingTask { bitmap ->
+            // 保存图片
+            auction.switchHero(10)
+            onStatusUpdate("测试任务已完成")
+            stop()
+        }
+    }
     /**
      * 开始拍卖行抢拍
      */

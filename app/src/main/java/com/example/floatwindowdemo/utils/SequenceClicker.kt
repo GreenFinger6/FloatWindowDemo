@@ -94,4 +94,45 @@ object SequenceClicker {
             false
         }
     }
+
+    /**
+     * 等待图像出现的方法
+     * @param templateName 模板名称
+     * @param timeoutMillis 最大等待时间
+     * @param checkInterval 检查间隔
+     */
+    suspend fun waitForImage(
+        templateName: String,
+        timeoutMillis: Long = 50000L, // 最多等待50秒加载
+        checkInterval: Long = 500L    // 每隔0.5秒查一次
+    ): Boolean {
+        Log.d(TAG, "等待 UI 出现: $templateName")
+        return withTimeoutOrNull(timeoutMillis) {
+            var found = false
+            while (!found) {
+                // 1. 获取最新帧
+                val frame = ScreenCaptureManager.frameFlow.first()
+                try {
+                    val template = OpencvUtil.templateCache[templateName]
+                    if (template != null) {
+                        // 2. 后台线程执行识别
+                        val loc = withContext(Dispatchers.Default) {
+                            OpencvUtil.findImage(frame, template)
+                        }
+                        if (loc != null) {
+                            found = true
+                        }
+                    } else {
+                        Log.e(TAG, "等待失败：模板 $templateName 未加载")
+                        return@withTimeoutOrNull false
+                    }
+                } finally {
+                    // 3. 必须回收
+                    frame.recycle()
+                }
+                if (!found) delay(checkInterval)
+            }
+            true
+        } ?: false
+    }
 }

@@ -8,7 +8,9 @@ import com.example.floatwindowdemo.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 游戏状态枚举
@@ -23,6 +25,8 @@ class GameManager(private val context: Context) {
     private val TAG = "GameManager"
     private var isTown = true // 是否在城镇
     private var takeNext = false // 是否可以再次挑战
+
+    private val UI_CD = 500L // UI延迟，ms
 
     /**
      * 每一帧的入口
@@ -97,7 +101,7 @@ class GameManager(private val context: Context) {
                             Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc.x.toFloat(), againLoc.y.toFloat())
                             takeNext = false // 重置状态
-                            delay(500)      // 点击后稍微缓冲
+                            delay(UI_CD)      // 点击后稍微缓冲
                             false
                         }
                         backLoc != null -> {
@@ -122,5 +126,51 @@ class GameManager(private val context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * 切换到指定英雄
+     */
+
+    suspend fun switchHero(targetHero: Int): Boolean{
+        var tmp = targetHero
+        // 切换目标角色
+        Log.d(TAG,"选择角色${tmp+1}")
+        while (tmp >= 5){
+            // 下移到下一栏角色
+            AutomationService.instance?.swipe(Pair(0.4979f, 0.8490f), Pair(0.4979f, 0.1490f), 2000)
+            tmp -= 5
+        }
+        delay(UI_CD)
+
+        // 选择对应角色
+        val heroButton = Dungeon.Buttons.SelectHeroList[tmp]
+        AutomationService.instance?.doubleClick(heroButton.first,heroButton.second)
+
+        // 检测是否出现委托
+        return SequenceClicker.waitForImage("btn_select_hero")
+    }
+
+    /**
+     * 返回角色选择
+     * 流程：点击设置 -> 点击选择角色 -> 等待页面切换成功
+     */
+    suspend fun backSelectHero() : Boolean{
+        Log.d(TAG, "返回角色选择")
+        // 点击设置
+        val settingsPos = Pair(0.95f, 0.05f)
+        AutomationService.instance?.click(settingsPos.first, settingsPos.second)
+        delay(UI_CD) // 等待菜单弹出
+
+        // 选择角色
+        val selectHeroStepSuccess = SequenceClicker.runSequence(listOf("btn_select_hero"))
+        if (!selectHeroStepSuccess) {
+            // 如果模板识别不到，兜底使用固定位置点击（假设坐标如下）
+            Log.w(TAG, "模板识别失败，尝试固定位置点击选择角色")
+            AutomationService.instance?.click(0.5f, 0.6f)
+        }
+
+        // 检测是否成功切换
+        return SequenceClicker.waitForImage("btn_select_hero")
     }
 }
