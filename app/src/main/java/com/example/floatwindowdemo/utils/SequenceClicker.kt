@@ -19,56 +19,35 @@ object SequenceClicker {
 
     // 配置参数
     private const val STABLE_REQUIRED = 3       // 连续识别成功次数，保证点击准确
-    private const val MAX_RETRY_PER_STEP = 60   // 每步最大尝试帧数 (约 6-10 秒)
-    private const val STEP_DELAY = 1200L        // 点击成功后的转场等待时间
-    private const val TOTAL_TIMEOUT = 30000L    // 整个序列执行的绝对超时时间 (30秒)
+    private const val MAX_RETRY_PER_STEP = 10  // 每步最大尝试帧数
+    private const val TOTAL_TIMEOUT = 100000L    // 整个序列执行的绝对超时时间 (100秒)
 
     /**
-     * 执行点击序列（增强版：点击直到目标消失才继续）
+     * 执行点击序列
      * @param taskList 模板名称列表
      * @return true 表示全部成功点完，false 表示中途超时或失败
      */
     suspend fun runSequence(taskList: List<String>): Boolean {
         return withTimeoutOrNull(TOTAL_TIMEOUT) {
-            for (target in taskList) {
+            var index = 0
+            while (index < taskList.size) {
+                val target = taskList[index]
                 var isStepFinished = false
                 var stepRetryCount = 0
 
                 // 外部大循环：确保该步骤点击并导致 UI 发生变化（目标消失）
                 while (!isStepFinished && stepRetryCount < MAX_RETRY_PER_STEP) {
-
+                    Log.d(TAG, "准备点击 $target")
                     // 1. 等待目标出现并稳定
                     val location = findStableTarget(target)
 
                     if (location != null) {
                         // 2. 执行点击
-                        Log.d(TAG, "检测到 $target，执行点击并等待其消失...")
+                        Log.d(TAG, "检测到 $target，执行点击...")
                         AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
 
                         // 3. 核心机制：等待目标消失
-                        // 给 UI 反应时间，每隔 300ms 检查一次，最多检查 5 次
-                        var disappeared = false
-                        for (i in 0 until 5) {
-                            delay(400L) // 每次点击后给点缓冲
-                            val frame = ScreenCaptureManager.frameFlow.first()
-                            val stillThere = try {
-                                val template = OpencvUtil.templateCache[target]
-                                withContext(Dispatchers.Default) {
-                                    if (template != null) OpencvUtil.findImage(frame, template) != null else false
-                                }
-                            } finally {
-                                frame.recycle()
-                            }
-
-                            if (!stillThere) {
-                                disappeared = true
-                                break
-                            } else {
-                                // 补点一下，防止没点中
-                                AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
-                            }
-                        }
-                        if (disappeared) {
+                        if (isStableDisappear(target)) {
                             isStepFinished = true
                         }
                     } else {
@@ -78,16 +57,45 @@ object SequenceClicker {
                     }
                 }
 
-                if (!isStepFinished) {
-                    Log.e(TAG, "步骤 $target 超时或失败")
+                if (isStepFinished) {
+                    // 当前步成功，进入下一步
+                    index++
+                    delay(500L)
+                } else {
+                    // --- 核心回退逻辑 ---
+                    Log.w(TAG, "步骤 $target 超时失败，尝试回退检查...")
+
+                    if (index > 0) {
+                        val prevTarget = taskList[index - 1]
+                        if (isTargetPresent(prevTarget)) {
+                            Log.e(TAG, "发现上一步骤 [$prevTarget] 依然存在，流程回退！")
+                            index-- // 索引回退
+                            continue // 重新开始循环处理回退后的步骤
+                        }
+                    }
+
+                    // 如果没有上一步或者上一步也不存在，则彻底失败
+                    Log.e(TAG, "无法回退或回退确认失败，序列终止")
                     return@withTimeoutOrNull false
                 }
-
-                // 步骤间固定 CD，防止转场动画干扰
-                delay(500L)
             }
             true
         } ?: false
+    }
+
+    /**
+     * 辅助：判断特定目标当前是否在画面中
+     */
+    private suspend fun isTargetPresent(targetName: String): Boolean {
+        val frame = ScreenCaptureManager.frameFlow.first()
+        return try {
+            val template = OpencvUtil.templateCache[targetName]
+            withContext(Dispatchers.Default) {
+                if (template != null) OpencvUtil.findImage(frame, template) != null else false
+            }
+        } finally {
+            frame.recycle()
+        }
     }
 
     /**
@@ -116,6 +124,35 @@ object SequenceClicker {
             delay(100L)
         }
         return null
+    }
+
+    /**
+     * 私有辅助：判断是否确实消失
+     */
+    private suspend fun isStableDisappear(targetName: String): Boolean {
+        var consecutiveCount = 0
+        val template = OpencvUtil.templateCache[targetName] ?: return false
+
+        for (i in 0 until 20) { // 最多找 20 帧
+            val bitmap = ScreenCaptureManager.frameFlow.first()
+            val loc = try {
+                withContext(Dispatchers.Default) {
+                    OpencvUtil.findImage(bitmap, template)
+                }
+            } finally {
+                bitmap.recycle()
+            }
+
+            if (loc != null) {
+                consecutiveCount = 0
+
+            } else {
+                consecutiveCount++
+                if (consecutiveCount >= STABLE_REQUIRED) return true
+            }
+            delay(100L)
+        }
+        return false
     }
 
     /**

@@ -99,7 +99,7 @@ class GameManager(private val context: Context) {
             val text = withContext(Dispatchers.Default) {
                 OcrManager.recognizeTextAsync(roi)
             }
-            text.contains("拾取道具")
+            text.contains("道具")
         } finally {
             roi.recycle() // 必须回收！防止 Native 内存溢出
         }
@@ -162,7 +162,9 @@ class GameManager(private val context: Context) {
 
         // 检测是否在角色选择界面
         if(!SequenceClicker.waitForImage(Dungeon.TPL_START_GAME))return false
+        delay(UI_CD*10)
 
+        // 开始向下滑动
         while (tmp >= 5){
             // 下移到下一栏角色
             AutomationService.instance?.swipe(Pair(623f, 508f), Pair(623f, 100f), 1000)
