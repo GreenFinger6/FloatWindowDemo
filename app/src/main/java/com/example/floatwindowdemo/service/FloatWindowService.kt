@@ -154,19 +154,17 @@ class FloatWindowService : Service() {
 
         // 悬浮球点击回调
         binding.ivFloatBall.onActionDownListener = {
+            scriptExecutor.isPausedBySystem = true
+
             // 手指按下立即停止隐藏倒计时，并恢复全显方便拖动
             ballHandler.removeCallbacks(hideBallRunnable)
             showFullBall()
 
-            scriptExecutor.isPausedBySystem = true
         }
 
         // 悬浮球松开点击回调
         binding.ivFloatBall.onActionUpListener = {
-            // 延迟一小会儿恢复，确保系统触摸流完全断开
-            binding.ivFloatBall.postDelayed({
-                scriptExecutor.isPausedBySystem = false
-            }, 200)
+            scriptExecutor.isPausedBySystem = false
 
             // 只有在控制面板收起的情况下才执行贴边（防止展开面板时球乱跑）
             if (binding.llControlPanel.isGone) {
