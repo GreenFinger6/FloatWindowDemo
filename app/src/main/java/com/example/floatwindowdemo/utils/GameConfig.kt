@@ -67,12 +67,15 @@ object Dungeon {
     const val TPL_RE_CHALLENGE = "button_re_challenge" // 再次挑战
     const val TPL_BACK_2_TOWN = "button_back2town"     // 返回城镇
     const val TPL_TASK_MENU = "button_task"            // 委托菜单
-    const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊切页
+    const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊
     const val TPL_CONFIRM = "button_confirm"           // 确认
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
     const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
     const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
     const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
+    const val TPL_PAST_DUNGEON = "button_past_dungeon"    // 老深渊
+    const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
+    const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
 
     // 涉及的状态检测相关模版
     val allTemplates = listOf(
@@ -84,7 +87,10 @@ object Dungeon {
         TPL_DUNGEON_SELECT,
         TPL_ENTRY_GATE,
         TPL_START_GAME,
-        TPL_SELECT_HERO
+        TPL_SELECT_HERO,
+        TPL_PAST_DUNGEON,
+        TPL_PAST_ENTRUST,
+        TPL_PRE_ENTRY,
     )
 
     // 进入深渊
@@ -93,6 +99,15 @@ object Dungeon {
         TPL_DUNGEON_TAB,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
+        TPL_ENTRY_GATE
+    )
+
+    // 进入深渊
+    val entryPastDungeon = listOf(
+        TPL_TASK_MENU,
+        TPL_PAST_ENTRUST,
+        TPL_PAST_DUNGEON,
+        TPL_PRE_ENTRY,
         TPL_ENTRY_GATE
     )
 }

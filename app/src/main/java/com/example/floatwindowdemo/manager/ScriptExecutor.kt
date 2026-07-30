@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.Auction
 import com.example.floatwindowdemo.utils.Dungeon
 import com.example.floatwindowdemo.utils.OpencvUtil
@@ -91,10 +92,10 @@ class ScriptExecutor(
      * 执行一系列点击任务
      */
     fun execute() {
-        OpencvUtil.preloadTemplates(context, Dungeon.entrySequence)
+        OpencvUtil.preloadTemplates(context, Dungeon.entryPastDungeon)
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
-            if (SequenceClicker.runSequence(Dungeon.entrySequence)) {
+            if (SequenceClicker.runSequence(Dungeon.entryPastDungeon)) {
                 onStatusUpdate("任务序列已执行完毕")
                 stop()
             }
@@ -125,16 +126,18 @@ class ScriptExecutor(
         OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         val auction = GameManager(context)
         runStreamingTask { bitmap ->
-            // 保存图片
-            if(!auction.switchHero(12)){
+//            if(!auction.switchHero(12)){
+//                onStatusUpdate("测试任务已完成")
+//                stop()
+//            }
+//            if(!auction.backSelectHero()){
+//                onStatusUpdate("测试任务已完成")
+//                stop()
+//            }
+              if(AutomationService.instance?.performBack() == true){
                 onStatusUpdate("测试任务已完成")
                 stop()
-            }
-            if(!auction.backSelectHero()){
-                onStatusUpdate("测试任务已完成")
-                stop()
-            }
-
+              }
         }
     }
     /**

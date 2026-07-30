@@ -113,6 +113,20 @@ class AutomationService : AccessibilityService() {
             }, null)
         }
 
+    /**
+    * 模拟按下系统返回键
+    * @return 执行指令是否成功
+    */
+
+    fun performBack(): Boolean {
+        // GLOBAL_ACTION_BACK 是无障碍服务内置的全局动作常量
+        val success = performGlobalAction(GLOBAL_ACTION_BACK)
+        if (success) {
+            android.util.Log.d("Automation", "执行系统返回操作成功")
+        }
+        return success
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // 必须重写，但如果不处理系统事件可以留空
     }

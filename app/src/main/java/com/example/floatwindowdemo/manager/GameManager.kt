@@ -68,7 +68,7 @@ class GameManager(private val context: Context) {
                         // 选择下一个启用的角色进入城镇
                         switchHero(countHero)
                         // 进入深渊
-                        SequenceClicker.runSequence(Dungeon.entrySequence)
+                        SequenceClicker.runSequence(Dungeon.entryPastDungeon)
                         // 切换状态
                         isTown = false
                         return false
@@ -125,7 +125,7 @@ class GameManager(private val context: Context) {
                         againLoc != null -> {
                             Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc.x.toFloat(), againLoc.y.toFloat())
-                            delay(UI_CD)      // 点击后稍微缓冲
+                            delay(UI_CD*4)      // 点击后稍微缓冲
                             false
                         }
                         backLoc != null -> {
@@ -184,60 +184,45 @@ class GameManager(private val context: Context) {
     }
 
     /**
-     * 返回角色选择
-     * 流程：点击设置 -> 点击选择角色 -> 等待页面切换成功
+     * 返回角色选择 (深度优化版)
+     * 逻辑：
+     * 1. 强制回归城镇：只要不在城镇，就不断尝试寻找 TPL_BACK 并点击，直到看到 TPL_TASK_MENU。
+     * 2. 循环打开设置：只要没看到“选择角色”按钮，就不断点击固定坐标的“设置”按钮。
+     * 3. 序列点击：执行“选择角色”动作。
+     * 4. 最终等待：无限等待直到进入“开始游戏”页面（角色选择界面）。
      */
-    suspend fun backSelectHero() : Boolean{
-        Log.d(TAG, "返回角色选择")
+    suspend fun backSelectHero(): Boolean {
+        Log.d(TAG, "开始执行：返回角色选择流程 (无限重试模式)")
 
-        // 检测是否在城镇
-        if (!SequenceClicker.waitForImage(Dungeon.TPL_TASK_MENU)) {
-            Log.e(TAG, "不在城镇界面，无法返回角色选择")
-            return false
-        }
-        delay(UI_CD*4) // 等待游戏加载
+        // 循环打开设置菜单 ---
+        while (true) {
+            Log.d(TAG, "全局返回操作")
 
-        // 点击设置
-        // 2. 闭环操作：循环点击“设置”，直到“选择角色”按钮出现
-        val isMenuOpened = withTimeoutOrNull(15000L) { // 设置15秒总超时
-            var found = false
-            while (!found) {
-                Log.d(TAG, "尝试点击设置按钮...")
-                // 执行固定坐标点击
-                AutomationService.instance?.click(Dungeon.Buttons.Settings)
+            // 尝试返回
+            AutomationService.instance?.performBack()
 
-                // 给 UI 反应时间（比如 1 秒），然后抽帧检查菜单是否弹出
-                delay(1000L)
+            // 给 UI 反应时间
+            delay(1200L)
 
-                val frame = ScreenCaptureManager.frameFlow.first()
-                try {
-                    val tplSelectHero = OpencvUtil.templateCache[Dungeon.TPL_SELECT_HERO]
-                    if (tplSelectHero != null) {
-                        // 在后台线程匹配“选择角色”按钮
-                        val loc = withContext(Dispatchers.Default) {
-                            OpencvUtil.findImage(frame, tplSelectHero)
-                        }
-                        if (loc != null) {
-                            Log.d(TAG, "菜单已成功打开，检测到选择角色按钮")
-                            found = true
-                        }
-                    }
-                } finally {
-                    frame.recycle() // 必须回收
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val foundMenu = SequenceClicker.findInFrame(frame,Dungeon.TPL_SELECT_HERO)
+                if (foundMenu != null) {
+                    Log.d(TAG, "设置菜单已成功打开，检测到选择角色按钮")
+                    break // 菜单已开，跳出循环
                 }
+            } finally {
+                frame.recycle()
             }
-            true
-        } ?: false
-
-        if (!isMenuOpened) {
-            Log.e(TAG, "尝试打开设置菜单超时，可能发生卡顿或界面异常")
-            return false
+            // 如果没跳出，会继续下一轮点击设置
         }
 
-        // 选择角色
+        // --- 第三阶段：执行选择角色序列 ---
+        // 这里使用之前封装好的 runSequence，它内部也有消失检测机制
         SequenceClicker.runSequence(listOf(Dungeon.TPL_SELECT_HERO))
 
-        // 检测是否成功切换
-        return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME)
+        // --- 第四阶段：等待进入角色选择页面 (无限等待) ---
+        Log.d(TAG, "等待进入角色选择页面 (TPL_START_GAME)...")
+        return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME, 0)
     }
 }

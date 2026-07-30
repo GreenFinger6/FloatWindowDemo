@@ -85,7 +85,7 @@ object SequenceClicker {
     /**
      * 辅助：在单帧中快速查找目标
      */
-    private suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
+    suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
         val template = OpencvUtil.templateCache[targetName] ?: return null
         return withContext(Dispatchers.Default) {
             OpencvUtil.findImage(bitmap, template)
@@ -172,36 +172,36 @@ object SequenceClicker {
      */
     suspend fun waitForImage(
         templateName: String,
-        timeoutMillis: Long = 50000L, // 最多等待50秒加载
+        timeoutMillis: Long = 0, // 最多等待时间，为0代表无限等待
         checkInterval: Long = 500L    // 每隔0.5秒查一次
     ): Boolean {
-        Log.d(TAG, "等待 UI 出现: $templateName")
-        return withTimeoutOrNull(timeoutMillis) {
+        // 定义核心循环逻辑
+        val checkLoop: suspend () -> Boolean = {
             var found = false
             while (!found) {
-                // 1. 获取最新帧
                 val frame = ScreenCaptureManager.frameFlow.first()
                 try {
                     val template = OpencvUtil.templateCache[templateName]
                     if (template != null) {
-                        // 2. 后台线程执行识别
                         val loc = withContext(Dispatchers.Default) {
                             OpencvUtil.findImage(frame, template)
                         }
-                        if (loc != null) {
-                            found = true
-                        }
-                    } else {
-                        Log.e(TAG, "等待失败：模板 $templateName 未加载")
-                        return@withTimeoutOrNull false
+                        if (loc != null) found = true
                     }
                 } finally {
-                    // 3. 必须回收
                     frame.recycle()
                 }
                 if (!found) delay(checkInterval)
             }
             true
-        } ?: false
+        }
+
+        // 根据 timeoutMillis 决定是否使用超时限制
+        return if (timeoutMillis > 0) {
+            withTimeoutOrNull(timeoutMillis) { checkLoop() } ?: false
+        } else {
+            // timeoutMillis 为 0，无限等待
+            checkLoop()
+        }
     }
 }
