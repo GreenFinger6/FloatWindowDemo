@@ -1,5 +1,6 @@
 package com.example.floatwindowdemo.service
 
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -39,12 +40,8 @@ class FloatWindowService : Service() {
     private var toastView: View? = null
     private var toastBinding: LayoutToastBinding? = null // 假设你启用了 ViewBinding
     private val toastHandler = Handler(Looper.getMainLooper())
-
-    private var lastX = 0
-    private var lastY = 0
-    private var paramX = 0
-    private var paramY = 0
-
+    private val ballHandler = Handler(Looper.getMainLooper()) // 专门处理悬浮球贴边、半隐藏等逻辑的 Handler
+    private val hideBallRunnable = Runnable { hideHalfBall() }
     private val NOTIFICATION_CHANNEL_ID = "float_window_channel"
     private val NOTIFICATION_ID = 1001
 
@@ -122,6 +119,15 @@ class FloatWindowService : Service() {
 
         // 悬浮球点击事件
         binding.ivFloatBall.setOnClickListener {
+            //如果处于半隐藏状态，第一次点击只负责全显
+            if (binding.ivFloatBall.translationX != 0f) {
+                showFullBall()
+                // 全显后重新开始 3 秒倒计时
+                ballHandler.postDelayed(hideBallRunnable, 3000)
+                return@setOnClickListener
+            }
+
+            // --- 第二次点击（或已经是全显状态）才操作菜单
             // 1. 开启延迟过渡动画：系统会自动监听接下来对布局的改动并添加动画
             // 这个方法会让布局变化时带上淡入淡出和位移效果
             androidx.transition.TransitionManager.beginDelayedTransition(
@@ -133,27 +139,41 @@ class FloatWindowService : Service() {
 
             // 2. 修改可见性
             if (binding.llControlPanel.isGone) {
+                // 打开菜单：取消隐藏任务并确保全显
+                ballHandler.removeCallbacks(hideBallRunnable)
                 binding.llControlPanel.visibility = View.VISIBLE
             } else {
                 binding.llControlPanel.visibility = View.GONE
+                snapToEdge()
             }
 
             // 3. 关键点：因为宽度变了，动画过程中需要告诉 WindowManager 重新布局
             // 某些情况下系统不一定会自动重绘窗口，加上这一句可以确保窗口大小能跟随动画延展
             windowManager.updateViewLayout(binding.root, layoutParams)
         }
-        // 在 initFloatWindow绑定处
+
         // 悬浮球点击回调
         binding.ivFloatBall.onActionDownListener = {
+            // 手指按下立即停止隐藏倒计时，并恢复全显方便拖动
+            ballHandler.removeCallbacks(hideBallRunnable)
+            showFullBall()
+
             scriptExecutor.isPausedBySystem = true
         }
+
         // 悬浮球松开点击回调
         binding.ivFloatBall.onActionUpListener = {
             // 延迟一小会儿恢复，确保系统触摸流完全断开
             binding.ivFloatBall.postDelayed({
                 scriptExecutor.isPausedBySystem = false
             }, 200)
+
+            // 只有在控制面板收起的情况下才执行贴边（防止展开面板时球乱跑）
+            if (binding.llControlPanel.isGone) {
+                snapToEdge()
+            }
         }
+
         // 悬浮球拖拽事件
         binding.ivFloatBall.onDragListener = { dx, dy ->
             layoutParams.x = layoutParams.x + dx.toInt()
@@ -161,6 +181,7 @@ class FloatWindowService : Service() {
             windowManager.updateViewLayout(binding.root, layoutParams)
         }
 
+        // 悬浮球菜单点击
         binding.btnStartScript.setOnClickListener {
             if (!scriptExecutor.isRunning) {
                 // 状态：还没运行 -> 点击开始
@@ -168,22 +189,30 @@ class FloatWindowService : Service() {
                 // 从本地存储读取当前选中的任务索引
                 val taskIndex = ConfigManager.getMainTask(this)
                 when (taskIndex) {
-                    0 -> {
-                        // 拍卖行抢拍
-                        scriptExecutor.startAuction()
-                    }
-                    1 -> {
-                        // 调用多角色任务方法
-                        scriptExecutor.startTask()
-                    }
-                    2 -> {
-                        scriptExecutor.showAllText()
-                        // scriptExecutor.test()
-                        // scriptExecutor.saveScreen()
-                        // scriptExecutor.execute()
-                        //scriptExecutor.showAllText()
-                    }
+                    0 -> scriptExecutor.startAuction() // 拍卖行抢拍
+                    1 -> scriptExecutor.startTask() // 调用多角色任务方法
+                    2 -> scriptExecutor.saveScreen()
+                    // scriptExecutor.test()
+                    // scriptExecutor.saveScreen()
+                    // scriptExecutor.execute()
+                    //scriptExecutor.showAllText()
                 }
+
+                // 开启过渡动画
+                androidx.transition.TransitionManager.beginDelayedTransition(
+                    binding.root as android.view.ViewGroup,
+                    androidx.transition.AutoTransition().setDuration(300)
+                )
+
+                // 隐藏面板
+                binding.llControlPanel.visibility = View.GONE
+
+                // 告诉 WindowManager 宽度已缩小
+                windowManager.updateViewLayout(binding.root, layoutParams)
+
+                // 执行贴边逻辑（贴边方法内部会自动触发 3 秒半隐藏倒计时）
+                snapToEdge()
+
             } else {
                 // 状态 2：正在运行 -> 点击切换 暂停/恢复
                 scriptExecutor.togglePause()
@@ -347,6 +376,70 @@ class FloatWindowService : Service() {
         }, 2500)
     }
 
+    /**
+     * 实现悬浮球自动磁吸贴边 + 半圆隐藏效果
+     */
+    private fun snapToEdge() {
+        val metrics = resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val ballSize = resources.getDimensionPixelSize(R.dimen.float_size)
+
+        val centerX = screenWidth / 2
+        val currentX = layoutParams.x
+
+        // 1. 确定目标位置：依然是贴边，但不越界
+        val isLeft = currentX + ballSize / 2 < centerX
+        val targetX = if (isLeft) 0 else screenWidth - ballSize
+
+        // 2. 窗口位移至边缘
+        val animator = ValueAnimator.ofInt(currentX, targetX)
+        animator.addUpdateListener { animation ->
+            if (binding.root.parent != null) {
+                layoutParams.x = animation.animatedValue as Int
+                windowManager.updateViewLayout(binding.root, layoutParams)
+            }
+        }
+        animator.duration = 300
+        animator.interpolator = android.view.animation.DecelerateInterpolator()
+        animator.start()
+
+        // 贴边完成后，如果菜单没打开，则开启 3 秒隐藏倒计时
+        if (binding.llControlPanel.isGone) {
+            ballHandler.removeCallbacks(hideBallRunnable)
+            ballHandler.postDelayed(hideBallRunnable, 3000)
+        }
+    }
+
+    /**
+     * 视觉隐藏：将图片位移并降低透明度
+     */
+    private fun hideHalfBall() {
+        if (!binding.llControlPanel.isGone) return // 菜单开着，不隐藏
+
+        val ballSize = resources.getDimensionPixelSize(R.dimen.float_size)
+        val isLeft = layoutParams.x <= 0
+
+        val translationX = if (isLeft) -(ballSize / 2f) else (ballSize / 2f)
+
+        binding.ivFloatBall.animate()
+            .translationX(translationX)
+            .alpha(0.8f)
+            .setDuration(500)
+            .start()
+    }
+
+    /**
+     * 恢复全显：取消位移和透明度
+     */
+    private fun showFullBall() {
+        ballHandler.removeCallbacks(hideBallRunnable)
+        binding.ivFloatBall.animate()
+            .translationX(0f)
+            .alpha(1.0f)
+            .setDuration(200)
+            .start()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
@@ -373,8 +466,10 @@ class FloatWindowService : Service() {
             }
         }
 
-        // 移除所有尚未执行的定时隐藏任务，防止服务销毁后还尝试操作 UI
+        // 清理 Toast 的任务
         toastHandler.removeCallbacksAndMessages(null)
+        // 清理 悬浮球 的任务
+        ballHandler.removeCallbacksAndMessages(null)
 
         // 释放屏幕采集会话，防止内存泄漏和通知栏残留
         if (::screenCaptureManager.isInitialized) {

@@ -1,5 +1,6 @@
 package com.example.floatwindowdemo.utils
 
+import android.graphics.Bitmap
 import android.util.Log
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
 import com.example.floatwindowdemo.service.AutomationService
@@ -22,65 +23,73 @@ object SequenceClicker {
     private const val MAX_RETRY_PER_STEP = 10  // 每步最大尝试帧数
     private const val TOTAL_TIMEOUT = 100000L    // 整个序列执行的绝对超时时间 (100秒)
 
+
     /**
-     * 执行点击序列
-     * @param taskList 模板名称列表
-     * @return true 表示全部成功点完，false 表示中途超时或失败
+     * 执行点击序列（贪婪匹配 + 自动回退机制）
+     * 策略：同时寻找 [当前目标] 和 [上一步目标]
+     * 1. 优先点击 [当前目标]，成功后进入下一序号
+     * 2. 若当前不见但 [上一步目标] 还在，点击上一步尝试重新触发进度
      */
     suspend fun runSequence(taskList: List<String>): Boolean {
-        return withTimeoutOrNull(TOTAL_TIMEOUT) {
-            var index = 0
-            while (index < taskList.size) {
-                val target = taskList[index]
-                var isStepFinished = false
-                var stepRetryCount = 0
+        var index = 0
+        // 移除外部 withTimeoutOrNull，改为由内部业务逻辑控制
+        while (index < taskList.size) {
+            val target = taskList[index]
+            val prevTarget = if (index > 0) taskList[index - 1] else null
 
-                // 外部大循环：确保该步骤点击并导致 UI 发生变化（目标消失）
-                while (!isStepFinished && stepRetryCount < MAX_RETRY_PER_STEP) {
-                    Log.d(TAG, "准备点击 $target")
-                    // 1. 等待目标出现并稳定
-                    val location = findStableTarget(target)
+            Log.d(TAG, "当前寻找: $target")
 
-                    if (location != null) {
-                        // 2. 执行点击
-                        Log.d(TAG, "检测到 $target，执行点击...")
-                        AutomationService.instance?.click(location.x.toFloat(), location.y.toFloat())
+            // 1. 获取最新帧
+            val bitmap = ScreenCaptureManager.frameFlow.first()
+            try {
+                // 2. 并行（逻辑上）检测当前目标和上一步目标
+                val currentLoc = findInFrame(bitmap, target)
+                val prevLoc = if (prevTarget != null) findInFrame(bitmap, prevTarget) else null
 
-                        // 3. 核心机制：等待目标消失
+                when {
+                    // A. 贪婪匹配：当前目标出现了
+                    currentLoc != null -> {
+                        Log.d(TAG, "发现当前目标 $target，执行点击...")
+                        AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
+
+                        // 确认点击生效（消失）
                         if (isStableDisappear(target)) {
-                            isStepFinished = true
-                        }
-                    } else {
-                        // 没找到目标
-                        stepRetryCount++
-                        delay(200L)
-                    }
-                }
-
-                if (isStepFinished) {
-                    // 当前步成功，进入下一步
-                    index++
-                    delay(500L)
-                } else {
-                    // --- 核心回退逻辑 ---
-                    Log.w(TAG, "步骤 $target 超时失败，尝试回退检查...")
-
-                    if (index > 0) {
-                        val prevTarget = taskList[index - 1]
-                        if (isTargetPresent(prevTarget)) {
-                            Log.e(TAG, "发现上一步骤 [$prevTarget] 依然存在，流程回退！")
-                            index-- // 索引回退
-                            continue // 重新开始循环处理回退后的步骤
+                            Log.d(TAG, "步骤 $target 成功，准备进入下一步")
+                            index++
+                            delay(500L) // 步骤间冷却
                         }
                     }
 
-                    // 如果没有上一步或者上一步也不存在，则彻底失败
-                    Log.e(TAG, "无法回退或回退确认失败，序列终止")
-                    return@withTimeoutOrNull false
+                    // B. 回退重试：当前不见，但上一步还在
+                    prevLoc != null -> {
+                        Log.w(TAG, "当前 $target 不见，但上步 $prevTarget 仍在，尝试补点回退...")
+                        AutomationService.instance?.click(prevLoc.x.toFloat(), prevLoc.y.toFloat())
+                        delay(1000L) // 给 UI 一点反应时间，继续当前循环
+                    }
+
+                    // C. 都没发现：可能在转场、加载或彻底跑偏
+                    else -> {
+                        delay(500L)
+                    }
                 }
+            } finally {
+                bitmap.recycle()
             }
-            true
-        } ?: false
+
+            // 这里可以加一个最大重试计数保护，防止死循环
+            // 或者根据你的需求，如果不找完不罢休，就一直循环
+        }
+        return true
+    }
+
+    /**
+     * 辅助：在单帧中快速查找目标
+     */
+    private suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
+        val template = OpencvUtil.templateCache[targetName] ?: return null
+        return withContext(Dispatchers.Default) {
+            OpencvUtil.findImage(bitmap, template)
+        }
     }
 
     /**
