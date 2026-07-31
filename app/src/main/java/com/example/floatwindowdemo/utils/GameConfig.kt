@@ -76,8 +76,14 @@ object Dungeon {
     const val TPL_PAST_DUNGEON = "button_past_dungeon"    // 老深渊
     const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
     const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
+    const val TPL_SECRET_SHOP = "button_secret_shop"    // 神秘商店
+    const val TPL_SECRET_SHOP_REFRESH = "button_secret_shop_refresh"    // 神秘商店免费刷新
+    const val TPL_SECRET_SHOP_BUY1 = "button_secret_shop_buy1"    // 神秘商店购买
+    const val TPL_SECRET_SHOP_BUY2 = "button_secret_shop_buy2"    // 神秘商店购买2
+    const val TPL_BAG = "button_bag"                // 背包
+    const val TPL_DECOMPOSE = "button_decompose"    // 分解
 
-    // 涉及的状态检测相关模版
+    // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
         TPL_RE_CHALLENGE,
         TPL_BACK_2_TOWN,
@@ -91,9 +97,15 @@ object Dungeon {
         TPL_PAST_DUNGEON,
         TPL_PAST_ENTRUST,
         TPL_PRE_ENTRY,
+        TPL_SECRET_SHOP,
+        TPL_SECRET_SHOP_REFRESH,
+        TPL_SECRET_SHOP_BUY1,
+        TPL_SECRET_SHOP_BUY2,
+        TPL_BAG,
+        TPL_DECOMPOSE
     )
 
-    // 进入深渊
+    // 进入多维秘境
     val entrySequence = listOf(
         TPL_TASK_MENU,
         TPL_DUNGEON_TAB,
@@ -109,5 +121,12 @@ object Dungeon {
         TPL_PAST_DUNGEON,
         TPL_PRE_ENTRY,
         TPL_ENTRY_GATE
+    )
+
+    // 背包分解
+    val decomposeBag = listOf(
+        TPL_BAG,
+        TPL_DECOMPOSE,
+        TPL_CONFIRM
     )
 }

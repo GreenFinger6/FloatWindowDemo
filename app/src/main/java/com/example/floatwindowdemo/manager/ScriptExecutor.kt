@@ -126,18 +126,11 @@ class ScriptExecutor(
         OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         val auction = GameManager(context)
         runStreamingTask { bitmap ->
-//            if(!auction.switchHero(12)){
-//                onStatusUpdate("测试任务已完成")
-//                stop()
-//            }
-//            if(!auction.backSelectHero()){
-//                onStatusUpdate("测试任务已完成")
-//                stop()
-//            }
-              if(AutomationService.instance?.performBack() == true){
-                onStatusUpdate("测试任务已完成")
+            auction.secretShop()
+            if (SequenceClicker.runSequence(Dungeon.decomposeBag)) {
+                onStatusUpdate("任务完成")
                 stop()
-              }
+            }
         }
     }
     /**

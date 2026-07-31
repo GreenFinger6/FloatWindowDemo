@@ -33,3 +33,4 @@ local.properties
 
 # 系统文件
 Thumbs.db
+/.artifacts/

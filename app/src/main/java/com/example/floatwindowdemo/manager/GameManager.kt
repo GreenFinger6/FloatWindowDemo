@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import org.opencv.core.Point
 
 /**
  * 游戏状态枚举
@@ -48,12 +49,14 @@ class GameManager(private val context: Context) {
             }
         }
 
-
         // 3. 状态分发逻辑
         val state = detectCurrentState()
         when (state) {
             GameState.BATTLE -> {
                 if(autoBattle(bitmap)){ // 当前角色战斗结束
+                    // 神秘商店
+                    // 分解装备
+                    // 领取邮件
                     // 返回角色选择界面
                     backSelectHero()
                     // 切换状态
@@ -89,9 +92,9 @@ class GameManager(private val context: Context) {
     }
 
     /**
-     * 处理战斗场景
+     * 自动战斗，直到疲劳或门票耗尽返回城镇
      */
-    private suspend fun autoBattle (bitmap: Bitmap) : Boolean{
+    suspend fun autoBattle (bitmap: Bitmap) : Boolean{
         // 使用 try-finally 确保裁剪的 Bitmap 无论如何都会被回收
         val roi = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
         val currentHasPickUp = try {
@@ -151,9 +154,8 @@ class GameManager(private val context: Context) {
     }
 
     /**
-     * 切换到指定英雄
+     * 在角色选择界面选择指定角色进入游戏
      */
-
     suspend fun switchHero(targetHero: Int): Boolean{
         var tmp = targetHero
         // 切换目标角色
@@ -184,11 +186,6 @@ class GameManager(private val context: Context) {
 
     /**
      * 返回角色选择 (深度优化版)
-     * 逻辑：
-     * 1. 强制回归城镇：只要不在城镇，就不断尝试寻找 TPL_BACK 并点击，直到看到 TPL_TASK_MENU。
-     * 2. 循环打开设置：只要没看到“选择角色”按钮，就不断点击固定坐标的“设置”按钮。
-     * 3. 序列点击：执行“选择角色”动作。
-     * 4. 最终等待：无限等待直到进入“开始游戏”页面（角色选择界面）。
      */
     suspend fun backSelectHero(): Boolean {
         Log.d(TAG, "开始执行：返回角色选择流程 (无限重试模式)")
@@ -223,5 +220,81 @@ class GameManager(private val context: Context) {
         // --- 第四阶段：等待进入角色选择页面 (无限等待) ---
         Log.d(TAG, "等待进入角色选择页面 (TPL_START_GAME)...")
         return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME, 0)
+    }
+
+    /**
+     * 神秘商店自动化逻辑：进入商店 -> 自动购买 -> 免费刷新 -> 退出
+     */
+    suspend fun secretShop(): Boolean {
+        Log.d(TAG, "开始执行神秘商店任务")
+
+        // 1. 尝试进入商店
+        val entryLoc = retryFind(Dungeon.TPL_SECRET_SHOP, 10)
+        if (entryLoc == null) {
+            Log.w(TAG, "未检测到神秘商店图标，跳过该任务")
+            return false
+        }
+
+        Log.d(TAG, "检测到神秘商店图标，尝试进入")
+        AutomationService.instance?.click(entryLoc.x.toFloat(), entryLoc.y.toFloat())
+        delay(UI_CD * 4) // 等待商店界面打开
+
+        // 2. 商店内部逻辑循环 (优先级：购买 > 刷新 > 确认)
+        val targets = listOf(
+            Dungeon.TPL_SECRET_SHOP_BUY1 to "发起购买",
+            Dungeon.TPL_SECRET_SHOP_BUY2 to "清单购买",
+            Dungeon.TPL_SECRET_SHOP_REFRESH to "免费刷新",
+            Dungeon.TPL_CONFIRM to "购买确认"
+        )
+
+        var continuousMissCount = 0
+        val maxMissCount = 10
+
+        while (continuousMissCount < maxMissCount) {
+            val frame = ScreenCaptureManager.frameFlow.first()
+            var actionTaken = false
+
+            try {
+                // 优雅地寻找第一个匹配的目标
+                targets.firstNotNullOfOrNull { (tpl, msg) ->
+                    OpencvUtil.findInFrame(frame, tpl)?.let { it to msg }
+                }?.let { (loc, msg) ->
+                    Log.i(TAG, msg)
+                    AutomationService.instance?.click(loc.x.toFloat(), loc.y.toFloat())
+                    actionTaken = true
+                }
+            } finally {
+                frame.recycle()
+            }
+
+            if (actionTaken) {
+                continuousMissCount = 0
+                delay(UI_CD * 3) // 执行动作后等待UI反馈
+            } else {
+                continuousMissCount++
+                delay(UI_CD * 2)
+            }
+        }
+
+        Log.d(TAG, "神秘商店任务执行完毕")
+        AutomationService.instance?.performBack()
+        return true
+    }
+
+    /**
+     * 通用的重试查找模板辅助方法
+     */
+    private suspend fun retryFind(target: String, retries: Int): Point? {
+        repeat(retries) {
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val loc = OpencvUtil.findInFrame(frame, target)
+                if (loc != null) return loc
+            } finally {
+                frame.recycle()
+            }
+            delay(UI_CD * 2)
+        }
+        return null
     }
 }
