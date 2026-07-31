@@ -55,10 +55,18 @@ class GameManager(private val context: Context) {
             GameState.BATTLE -> {
                 if(autoBattle(bitmap)){ // 当前角色战斗结束
                     // 神秘商店
+                    secretShop()
+
                     // 分解装备
-                    // 领取邮件
+                    SequenceClicker.runSequence(Dungeon.decomposeBag)
+
                     // 返回角色选择界面
                     backSelectHero()
+
+                    // 喵提醒
+                    val miaoCode = ConfigManager.getMiaoCode(context)
+                    if (miaoCode != null) postMiao(miaoCode, "角色${countHero+1}任务完成")
+
                     // 切换状态
                     isTown = true
                 }
@@ -241,14 +249,14 @@ class GameManager(private val context: Context) {
 
         // 2. 商店内部逻辑循环 (优先级：购买 > 刷新 > 确认)
         val targets = listOf(
-            Dungeon.TPL_SECRET_SHOP_BUY1 to "发起购买",
+            Dungeon.TPL_SECRET_SHOP_BUY to "发起购买",
             Dungeon.TPL_SECRET_SHOP_BUY2 to "清单购买",
             Dungeon.TPL_SECRET_SHOP_REFRESH to "免费刷新",
             Dungeon.TPL_CONFIRM to "购买确认"
         )
 
         var continuousMissCount = 0
-        val maxMissCount = 10
+        val maxMissCount = 3
 
         while (continuousMissCount < maxMissCount) {
             val frame = ScreenCaptureManager.frameFlow.first()

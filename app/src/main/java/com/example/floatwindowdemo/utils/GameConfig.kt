@@ -78,10 +78,12 @@ object Dungeon {
     const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
     const val TPL_SECRET_SHOP = "button_secret_shop"    // 神秘商店
     const val TPL_SECRET_SHOP_REFRESH = "button_secret_shop_refresh"    // 神秘商店免费刷新
-    const val TPL_SECRET_SHOP_BUY1 = "button_secret_shop_buy1"    // 神秘商店购买
+    const val TPL_SECRET_SHOP_BUY = "button_secret_shop_buy"    // 神秘商店购买
     const val TPL_SECRET_SHOP_BUY2 = "button_secret_shop_buy2"    // 神秘商店购买2
     const val TPL_BAG = "button_bag"                // 背包
     const val TPL_DECOMPOSE = "button_decompose"    // 分解
+    const val TPL_DECOMPOSE2 = "button_decompose2"    // 分解2
+    const val TPL_DECOMPOSE_CONFIRM = "button_decompose_confirm"    // 分解确认
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
@@ -99,10 +101,12 @@ object Dungeon {
         TPL_PRE_ENTRY,
         TPL_SECRET_SHOP,
         TPL_SECRET_SHOP_REFRESH,
-        TPL_SECRET_SHOP_BUY1,
+        TPL_SECRET_SHOP_BUY,
         TPL_SECRET_SHOP_BUY2,
         TPL_BAG,
-        TPL_DECOMPOSE
+        TPL_DECOMPOSE,
+        TPL_DECOMPOSE2,
+        TPL_DECOMPOSE_CONFIRM
     )
 
     // 进入多维秘境
@@ -127,6 +131,7 @@ object Dungeon {
     val decomposeBag = listOf(
         TPL_BAG,
         TPL_DECOMPOSE,
-        TPL_CONFIRM
+        TPL_DECOMPOSE2,
+        TPL_DECOMPOSE_CONFIRM
     )
 }
