@@ -26,6 +26,16 @@ object OpencvUtil {
     }
 
     /**
+     * 辅助：在单帧中快速查找目标
+     */
+    suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
+        val template = templateCache[targetName] ?: return null
+        return withContext(Dispatchers.Default) {
+            findImage(bitmap, template)
+        }
+    }
+
+    /**
      * 在源图(source)中查找模板图(template)
      * @param source 大图（通常是屏幕截图）
      * @param template 小图（你要找的图标或按钮）

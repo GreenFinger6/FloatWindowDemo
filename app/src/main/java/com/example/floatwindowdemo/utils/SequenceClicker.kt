@@ -1,6 +1,5 @@
 package com.example.floatwindowdemo.utils
 
-import android.graphics.Bitmap
 import android.util.Log
 import com.example.floatwindowdemo.manager.ScreenCaptureManager
 import com.example.floatwindowdemo.service.AutomationService
@@ -9,7 +8,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.opencv.core.Point
 
 /**
  * 序列点击执行器 - 单例优化版
@@ -43,8 +41,8 @@ object SequenceClicker {
             val bitmap = ScreenCaptureManager.frameFlow.first()
             try {
                 // 2. 并行（逻辑上）检测当前目标和上一步目标
-                val currentLoc = findInFrame(bitmap, target)
-                val prevLoc = if (prevTarget != null) findInFrame(bitmap, prevTarget) else null
+                val currentLoc = OpencvUtil.findInFrame(bitmap, target)
+                val prevLoc = if (prevTarget != null) OpencvUtil.findInFrame(bitmap, prevTarget) else null
 
                 when {
                     // A. 贪婪匹配：当前目标出现了
@@ -83,16 +81,6 @@ object SequenceClicker {
     }
 
     /**
-     * 辅助：在单帧中快速查找目标
-     */
-    suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
-        val template = OpencvUtil.templateCache[targetName] ?: return null
-        return withContext(Dispatchers.Default) {
-            OpencvUtil.findImage(bitmap, template)
-        }
-    }
-
-    /**
      * 辅助：判断特定目标当前是否在画面中
      */
     private suspend fun isTargetPresent(targetName: String): Boolean {
@@ -105,34 +93,6 @@ object SequenceClicker {
         } finally {
             frame.recycle()
         }
-    }
-
-    /**
-     * 私有辅助：寻找稳定的目标
-     */
-    private suspend fun findStableTarget(targetName: String): Point? {
-        var consecutiveCount = 0
-        val template = OpencvUtil.templateCache[targetName] ?: return null
-
-        for (i in 0 until 20) { // 最多找 20 帧
-            val bitmap = ScreenCaptureManager.frameFlow.first()
-            val loc = try {
-                withContext(Dispatchers.Default) {
-                    OpencvUtil.findImage(bitmap, template)
-                }
-            } finally {
-                bitmap.recycle()
-            }
-
-            if (loc != null) {
-                consecutiveCount++
-                if (consecutiveCount >= STABLE_REQUIRED) return loc
-            } else {
-                consecutiveCount = 0
-            }
-            delay(100L)
-        }
-        return null
     }
 
     /**

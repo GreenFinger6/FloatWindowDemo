@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 游戏状态枚举
@@ -206,7 +205,7 @@ class GameManager(private val context: Context) {
 
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
-                val foundMenu = SequenceClicker.findInFrame(frame,Dungeon.TPL_SELECT_HERO)
+                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_SELECT_HERO)
                 if (foundMenu != null) {
                     Log.d(TAG, "设置菜单已成功打开，检测到选择角色按钮")
                     break // 菜单已开，跳出循环
