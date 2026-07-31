@@ -132,6 +132,7 @@ object Dungeon {
         TPL_BAG,
         TPL_DECOMPOSE,
         TPL_DECOMPOSE2,
-        TPL_DECOMPOSE_CONFIRM
+        TPL_DECOMPOSE_CONFIRM,
+        TPL_CONFIRM
     )
 }
