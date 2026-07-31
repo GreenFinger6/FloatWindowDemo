@@ -189,7 +189,7 @@ class FloatWindowService : Service() {
                 when (taskIndex) {
                     0 -> scriptExecutor.startAuction() // 拍卖行抢拍
                     1 -> scriptExecutor.startTask() // 调用多角色任务方法
-                    2 -> scriptExecutor.test()
+                    2 -> scriptExecutor.saveScreen()
                     // scriptExecutor.test()
                     // scriptExecutor.saveScreen()
                     // scriptExecutor.execute()
