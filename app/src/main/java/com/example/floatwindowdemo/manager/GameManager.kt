@@ -236,6 +236,25 @@ class GameManager(private val context: Context) {
     suspend fun secretShop(): Boolean {
         Log.d(TAG, "开始执行神秘商店任务")
 
+        // 循环寻找神秘商店图标
+        while (true) {
+            // 尝试返回
+            AutomationService.instance?.performBack()
+            // 给 UI 反应时间
+            delay(1200L)
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)
+                if (foundMenu != null) {
+                    Log.d(TAG, "检测到神秘商店图标")
+                    break // 菜单已开，跳出循环
+                }
+            } finally {
+                frame.recycle()
+            }
+            // 如果没跳出，会继续下一轮点击设置
+        }
+
         // 1. 尝试进入商店
         val entryLoc = retryFind(Dungeon.TPL_SECRET_SHOP, 10)
         if (entryLoc == null) {
@@ -243,7 +262,7 @@ class GameManager(private val context: Context) {
             return false
         }
 
-        Log.d(TAG, "检测到神秘商店图标，尝试进入")
+        Log.d(TAG, "点击神秘商店")
         AutomationService.instance?.click(entryLoc.x.toFloat(), entryLoc.y.toFloat())
         delay(UI_CD * 4) // 等待商店界面打开
 
