@@ -17,27 +17,72 @@ object Auction {
     // 2. 裁剪区域 (x1, y1, x2, y2)
     // 建议使用自定义的数据类或 Rect，这里用自定义简单的封装
     object Regions {
-        // 准备购买数量区域
-        val PRE_BUY = RectArea(0f, 0f, 1080f, 200f)
-
         // 成功购买数量区域
-        val SUCCESS_BUY = RectArea(0f, 0f, 1080f, 200f)
+        val SUCCESS_BUY = RectArea(0.4268f, 0.6f, 0.6621f, 0.6556f)
 
         // 拍卖行最低价区域
         val MIN_PRICE = RectArea(0.1148f, 0.3708f, 0.4770f, 0.4556f)
     }
 
+    // 状态检测类模板
+    const val TPL_PURCHASE = "state_auction_purchase" // 判断购买页面
+    const val TPL_DETAIL = "state_auction_detail"     // 判断商品详情
+    const val TPL_BUY = "button_buy"                  //购买
+    const val TPL_CONFIRM = "button_confirm"          //购买确认
+    const val TPL_INPUT_NUM = "button_inputNum"        //点击输入购买数量
+    const val TPL_INPUT_MAX = "button_inputMax"        //最大数量输入
+    const val TPL_INPUT_CONFIRM = "button_inputConfirm"//数量输入
+    const val TPL_INPUT_NUM_0 = "button_inputNum_0"    //数字0
+    const val TPL_INPUT_NUM_1 = "button_inputNum_1"    //数字1
+    const val TPL_INPUT_NUM_2 = "button_inputNum_2"    //数字2
+    const val TPL_INPUT_NUM_3 = "button_inputNum_3"    //数字3
+    const val TPL_INPUT_NUM_4 = "button_inputNum_4"    //数字4
+    const val TPL_INPUT_NUM_5 = "button_inputNum_5"    //数字5
+    const val TPL_INPUT_NUM_6 = "button_inputNum_6"    //数字6
+    const val TPL_INPUT_NUM_7 = "button_inputNum_7"    //数字7
+    const val TPL_INPUT_NUM_8 = "button_inputNum_8"    //数字8
+    const val TPL_INPUT_NUM_9 = "button_inputNum_9"    //数字9
+
+
     // 涉及的状态检测相关模版
-    val stateTemplateList = listOf(
-        "state_auction_purchase", //判断购买页面
-        "state_auction_detail"  //判断商品详情
+    val allTemplates = listOf(
+        TPL_PURCHASE,
+        TPL_DETAIL,
+        TPL_INPUT_NUM,
+        TPL_INPUT_MAX,
+        TPL_INPUT_CONFIRM,
+        TPL_INPUT_NUM_0,
+        TPL_INPUT_NUM_1,
+        TPL_INPUT_NUM_2,
+        TPL_INPUT_NUM_3,
+        TPL_INPUT_NUM_4,
+        TPL_INPUT_NUM_5,
+        TPL_INPUT_NUM_6,
+        TPL_INPUT_NUM_7,
+        TPL_INPUT_NUM_8,
+        TPL_INPUT_NUM_9
     )
 
     // 购买序列按钮
     val buyList = listOf(
-        "button_buy", //购买
-        "button_confirm"  //购买确认
+        TPL_BUY,     //购买
+        TPL_CONFIRM  //购买确认
     )
+
+    /**
+     * 根据数字生成对应模版点击的list
+     * @param number 要输入的数字
+     * @return 模版名称列表
+     */
+    fun getNumberTemplates(number: Long): List<String> {
+        val digitMap = mapOf(
+            '0' to TPL_INPUT_NUM_0, '1' to TPL_INPUT_NUM_1, '2' to TPL_INPUT_NUM_2,
+            '3' to TPL_INPUT_NUM_3, '4' to TPL_INPUT_NUM_4, '5' to TPL_INPUT_NUM_5,
+            '6' to TPL_INPUT_NUM_6, '7' to TPL_INPUT_NUM_7, '8' to TPL_INPUT_NUM_8,
+            '9' to TPL_INPUT_NUM_9
+        )
+        return number.toString().mapNotNull { digitMap[it] } + TPL_INPUT_CONFIRM
+    }
 }
 
 // 深渊相关

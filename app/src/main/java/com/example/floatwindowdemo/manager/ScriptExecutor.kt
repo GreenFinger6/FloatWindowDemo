@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.Auction
 import com.example.floatwindowdemo.utils.Dungeon
 import com.example.floatwindowdemo.utils.OpencvUtil
@@ -137,10 +136,8 @@ class ScriptExecutor(
      * 开始拍卖行抢拍
      */
     fun startAuction() {
-        // 状态识别模版预加载
-        OpencvUtil.preloadTemplates(context, Auction.stateTemplateList)
-        // 购买识别模版加载
-        OpencvUtil.preloadTemplates(context, Auction.buyList)
+        // 识别模版预加载
+        OpencvUtil.preloadTemplates(context, Auction.allTemplates)
         val auction = AuctionManager(context)
         runStreamingTask { bitmap ->
             if (auction.onFrame(bitmap)) {
@@ -154,7 +151,7 @@ class ScriptExecutor(
      * 自动过图
      */
     fun startTask() {
-        // 状态识别模版预加载
+        // 识别模版预加载
         OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         val dungeon = GameManager(context)
         runStreamingTask { bitmap ->
