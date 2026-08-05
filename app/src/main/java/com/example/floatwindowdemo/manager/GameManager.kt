@@ -27,6 +27,7 @@ class GameManager(private val context: Context) {
     private var isTown = true // 是否在城镇
     private val UI_CD = 500L    // UI延迟，ms
     private var countHero = -1   // 当前角色下标
+    private val miaoCode = ConfigManager.getMiaoCode(context) // 喵提醒
     private val roleList: List<RoleData> = Gson().fromJson(ConfigManager.getRoleDataJson(context), object : TypeToken<List<RoleData>>() {}.type)
     /**
      * 每一帧的入口
@@ -64,7 +65,6 @@ class GameManager(private val context: Context) {
                     backSelectHero()
 
                     // 喵提醒
-                    val miaoCode = ConfigManager.getMiaoCode(context)
                     if (miaoCode != null) postMiao(miaoCode, "角色${countHero+1}任务完成")
 
                     // 切换状态

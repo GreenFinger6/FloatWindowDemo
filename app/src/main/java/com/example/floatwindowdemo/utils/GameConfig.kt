@@ -12,6 +12,7 @@ object Auction {
     object Buttons {
         val Detail = Pair(0.4964f, 0.2306f) // 拍卖行第一个物品位置
         val Back = Pair(0.0534f, 0.5764f) // 返回
+        val InputNum = Pair(1172.5f, 578f) // 数量输入
     }
 
     // 2. 裁剪区域 (x1, y1, x2, y2)
@@ -48,6 +49,8 @@ object Auction {
     val allTemplates = listOf(
         TPL_PURCHASE,
         TPL_DETAIL,
+        TPL_BUY,
+        TPL_CONFIRM,
         TPL_INPUT_NUM,
         TPL_INPUT_MAX,
         TPL_INPUT_CONFIRM,
@@ -81,7 +84,7 @@ object Auction {
             '6' to TPL_INPUT_NUM_6, '7' to TPL_INPUT_NUM_7, '8' to TPL_INPUT_NUM_8,
             '9' to TPL_INPUT_NUM_9
         )
-        return number.toString().mapNotNull { digitMap[it] } + TPL_INPUT_CONFIRM
+        return listOf(TPL_INPUT_NUM) + number.toString().mapNotNull { digitMap[it] }
     }
 }
 

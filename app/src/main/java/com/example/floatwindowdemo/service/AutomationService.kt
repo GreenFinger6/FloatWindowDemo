@@ -38,6 +38,8 @@ class AutomationService : AccessibilityService() {
         val finalX = if (x in 0f..1f) x * screenWidth else x
         val finalY = if (y in 0f..1f) y * screenHeight else y
 
+        android.util.Log.d("Automation", "点击坐标: ($finalX, $finalY)")
+
         val path = Path().apply {
             moveTo(finalX, finalY)
             lineTo(finalX, finalY)
@@ -51,12 +53,10 @@ class AutomationService : AccessibilityService() {
         dispatchGesture(gesture, object : GestureResultCallback() {
             override fun onCompleted(gestureDescription: GestureDescription?) {
                 if (continuation.isActive) continuation.resume(true)
-                // 这里可以添加点击后的日志或回调
             }
             override fun onCancelled(gestureDescription: GestureDescription?) {
+                android.util.Log.e("Automation", "点击被取消: 可能是由于物理触摸冲突或系统拦截")
                 if (continuation.isActive) continuation.resume(false)
-                // 如果你拖动时没静默，这里会疯狂报错
-                android.util.Log.e("Automation", "点击被取消: 可能是由于物理触摸冲突")
             }
         }, null)
     }

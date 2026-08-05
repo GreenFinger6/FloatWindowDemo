@@ -35,7 +35,7 @@ class AuctionManager(private val context: Context) {
     private val config = ConfigManager.getAuctionConfig(context)
     val targetPrice = config.maxPrice  //设置的目标单价
     val targetQty = config.maxQuantity //设置的目标数量
-    val miaoCode = ConfigManager.getMiaoCode(context) //喵提醒码
+    private val miaoCode = ConfigManager.getMiaoCode(context) //喵提醒码
     /**
      * 核心逻辑入口：处理每一帧
      */
@@ -78,10 +78,10 @@ class AuctionManager(private val context: Context) {
 
         // 2. 并行启动两个识别任务
         val listMatch = async {
-            OpencvUtil.findImage(bitmap, template1)
+            OpencvUtil.findImage(bitmap, template1, 0.9)
         }
         val detailMatch = async {
-            OpencvUtil.findImage(bitmap, template2)
+            OpencvUtil.findImage(bitmap, template2, 0.9)
         }
 
         // 3. 等待结果并决策
@@ -151,15 +151,24 @@ class AuctionManager(private val context: Context) {
         val tmpQty = targetQty-purchasedQty
         Log.i(TAG,"尝试购买单价: $price, 数量: $tmpQty")
         // 喵提醒
-        if (miaoCode != null) postMiao(miaoCode, "尝试购买单价:$price, 数量:$qty\n" +
+        if (miaoCode != null) postMiao(miaoCode, "尝试购买单价:$price, 数量:$qty \n" +
                 "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
 
-        if (tmpQty < qty){
+        if (targetQty != 0L && tmpQty < qty){
             // 此时需要手动输入数量
-            SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty))
+            SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
         }else{
             // 此时点击最大数量输入
-            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_MAX))
+            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
+        }
+
+        // 处理可能的输入确认, 不知道什么原因无法通过模版识别点击准确位置，只能点击偏移坐标
+        while(true){
+            val bitmap = ScreenCaptureManager.frameFlow.first()
+            if (OpencvUtil.findInFrame(bitmap,Auction.TPL_INPUT_CONFIRM) != null) {
+                AutomationService.instance?.click(Auction.Buttons.InputNum)
+                delay(UI_CD)
+            }else break
         }
 
         // 执行点击购买

@@ -28,7 +28,7 @@ object SequenceClicker {
      * 1. 优先点击 [当前目标]，成功后进入下一序号
      * 2. 若当前不见但 [上一步目标] 还在，点击上一步尝试重新触发进度
      */
-    suspend fun runSequence(taskList: List<String>): Boolean {
+    suspend fun runSequence(taskList: List<String>, isDisappear: Boolean = true): Boolean {
         var index = 0
         // 移除外部 withTimeoutOrNull，改为由内部业务逻辑控制
         while (index < taskList.size) {
@@ -50,9 +50,14 @@ object SequenceClicker {
                         Log.d(TAG, "发现当前目标 $target，执行点击...")
                         AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
 
-                        // 确认点击生效（消失）
-                        if (isStableDisappear(target)) {
-                            Log.d(TAG, "步骤 $target 成功，准备进入下一步")
+                        // 是否需要确认点击生效（消失）
+                        if(isDisappear){
+                            if (isStableDisappear(target)) {
+                                Log.d(TAG, "步骤 $target 成功，准备进入下一步")
+                                index++
+                                delay(500L) // 步骤间冷却
+                            }
+                        }else{
                             index++
                             delay(500L) // 步骤间冷却
                         }
