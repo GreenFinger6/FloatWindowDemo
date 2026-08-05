@@ -132,6 +132,8 @@ object Dungeon {
     const val TPL_DECOMPOSE = "button_decompose"    // 分解
     const val TPL_DECOMPOSE2 = "button_decompose2"    // 分解2
     const val TPL_DECOMPOSE_CONFIRM = "button_decompose_confirm"    // 分解确认
+    const val TPL_EMAIL = "button_email"    // 邮件
+    const val TPL_CLAIM_MAIL = "button_claimMail"    // 领取邮件
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
@@ -154,7 +156,9 @@ object Dungeon {
         TPL_BAG,
         TPL_DECOMPOSE,
         TPL_DECOMPOSE2,
-        TPL_DECOMPOSE_CONFIRM
+        TPL_DECOMPOSE_CONFIRM,
+        TPL_EMAIL,
+        TPL_CLAIM_MAIL
     )
 
     // 进入多维秘境

@@ -61,6 +61,9 @@ class GameManager(private val context: Context) {
                     // 分解装备
                     SequenceClicker.runSequence(Dungeon.decomposeBag)
 
+                    // 领取邮件
+                    claimMail()
+
                     // 返回角色选择界面
                     backSelectHero()
 
@@ -77,6 +80,7 @@ class GameManager(private val context: Context) {
                     if (roleList[countHero].isEnabled) {
                         // 选择下一个启用的角色进入城镇
                         switchHero(countHero)
+                        // todo 处理可能出现的公告
                         // 进入深渊
                         SequenceClicker.runSequence(Dungeon.entryPastDungeon)
                         // 切换状态
@@ -252,7 +256,6 @@ class GameManager(private val context: Context) {
             } finally {
                 frame.recycle()
             }
-            // 如果没跳出，会继续下一轮点击设置
         }
 
         // 1. 尝试进入商店
@@ -305,6 +308,42 @@ class GameManager(private val context: Context) {
 
         Log.d(TAG, "神秘商店任务执行完毕")
         AutomationService.instance?.performBack()
+        return true
+    }
+
+    /**
+     * 领取角色邮件：点击邮件 -> 寻找可能领取的物品
+     */
+    suspend fun claimMail(): Boolean{
+        Log.d(TAG, "开始领取角色邮件")
+
+        // 循环寻找邮件图标
+        while (true) {
+            // 尝试返回
+            AutomationService.instance?.performBack()
+            // 给 UI 反应时间
+            delay(1200L)
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_EMAIL)
+                if (foundMenu != null) {
+                    Log.d(TAG, "检测到邮件图标")
+                    break // 菜单已开，跳出循环
+                }
+            } finally {
+                frame.recycle()
+            }
+        }
+
+        // 尝试领取邮件
+        val loc = retryFind(Dungeon.TPL_CLAIM_MAIL, 10)
+        if (loc == null) {
+            Log.w(TAG, "未检测到可领取的邮件，跳过该任务")
+            return false
+        }
+
+        Log.d(TAG, "点击领取邮件")
+        AutomationService.instance?.click(loc.x.toFloat(), loc.y.toFloat())
         return true
     }
 
