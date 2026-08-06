@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.opencv.core.Point
 import kotlin.coroutines.resume
 
 class AutomationService : AccessibilityService() {
@@ -61,7 +62,8 @@ class AutomationService : AccessibilityService() {
         }, null)
     }
 
-    suspend fun click(t: Pair<Float, Float>, duration: Long = 50L) = click(t.first, t.second, duration)
+    suspend fun click(pair: Pair<Float, Float>, duration: Long = 50L) = click(pair.first, pair.second, duration)
+    suspend fun click(point: Point, duration: Long = 50L) = click(point.x.toFloat(), point.y.toFloat(), duration)
 
     /**
      * 执行双击操作

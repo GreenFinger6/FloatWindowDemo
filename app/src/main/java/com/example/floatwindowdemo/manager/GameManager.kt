@@ -44,7 +44,7 @@ class GameManager(private val context: Context) {
             }
             if (confirmLoc != null) {
                 Log.d(TAG, "检测到确认弹窗，优先点击处理")
-                AutomationService.instance?.click(confirmLoc.x.toFloat(), confirmLoc.y.toFloat())
+                AutomationService.instance?.click(confirmLoc)
                 // 处理了弹窗后，本帧直接返回，不执行后续状态逻辑，等下一帧环境“干净”后再检测
                 return false
             }
@@ -138,13 +138,13 @@ class GameManager(private val context: Context) {
                     when {
                         againLoc != null -> {
                             Log.i(TAG, "点击：再次挑战")
-                            AutomationService.instance?.click(againLoc.x.toFloat(), againLoc.y.toFloat())
+                            AutomationService.instance?.click(againLoc)
                             delay(UI_CD*4)      // 点击后稍微缓冲
                             false
                         }
                         backLoc != null -> {
                             Log.i(TAG, "点击：返回城镇")
-                            AutomationService.instance?.click(backLoc.x.toFloat(), backLoc.y.toFloat())
+                            AutomationService.instance?.click(backLoc)
                             true // 告知 Service 任务切换回城镇模式
                         }
                         else -> {
@@ -187,7 +187,7 @@ class GameManager(private val context: Context) {
 
         // 选择对应角色
         val heroButton = Dungeon.Buttons.SelectHeroList[tmp]
-        AutomationService.instance?.click(heroButton.first,heroButton.second)
+        AutomationService.instance?.click(heroButton)
 
         // 开始游戏
         SequenceClicker.runSequence(listOf(Dungeon.TPL_START_GAME))
@@ -238,7 +238,7 @@ class GameManager(private val context: Context) {
      * 神秘商店自动化逻辑：进入商店 -> 自动购买 -> 免费刷新 -> 退出
      */
     suspend fun secretShop(): Boolean {
-        Log.d(TAG, "开始执行神秘商店任务")
+        Log.i(TAG, "开始执行神秘商店任务")
 
         // 循环寻找神秘商店图标
         while (true) {
@@ -266,7 +266,7 @@ class GameManager(private val context: Context) {
         }
 
         Log.d(TAG, "点击神秘商店")
-        AutomationService.instance?.click(entryLoc.x.toFloat(), entryLoc.y.toFloat())
+        AutomationService.instance?.click(entryLoc)
         delay(UI_CD * 4) // 等待商店界面打开
 
         // 2. 商店内部逻辑循环 (优先级：购买 > 刷新 > 确认)
@@ -290,7 +290,7 @@ class GameManager(private val context: Context) {
                     OpencvUtil.findInFrame(frame, tpl)?.let { it to msg }
                 }?.let { (loc, msg) ->
                     Log.i(TAG, msg)
-                    AutomationService.instance?.click(loc.x.toFloat(), loc.y.toFloat())
+                    AutomationService.instance?.click(loc)
                     actionTaken = true
                 }
             } finally {
@@ -315,7 +315,7 @@ class GameManager(private val context: Context) {
      * 领取角色邮件：点击邮件 -> 寻找可能领取的物品
      */
     suspend fun claimMail(): Boolean{
-        Log.d(TAG, "开始领取角色邮件")
+        Log.i(TAG, "开始领取角色邮件")
 
         // 循环寻找邮件图标
         while (true) {
@@ -343,7 +343,7 @@ class GameManager(private val context: Context) {
         }
 
         Log.d(TAG, "点击领取邮件")
-        AutomationService.instance?.click(loc.x.toFloat(), loc.y.toFloat())
+        AutomationService.instance?.click(loc)
         return true
     }
 
