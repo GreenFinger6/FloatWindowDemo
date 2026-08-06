@@ -54,7 +54,10 @@ class GameManager(private val context: Context) {
         val state = detectCurrentState()
         when (state) {
             GameState.BATTLE -> {
-                if(autoBattle(bitmap)){ // 当前角色战斗结束
+                if(autoBattle(bitmap)){
+                    // 当前角色战斗结束
+                    Log.i(TAG,"角色${countHero+1}战斗结束")
+
                     // 神秘商店
                     secretShop()
 
@@ -80,10 +83,13 @@ class GameManager(private val context: Context) {
                     if (roleList[countHero].isEnabled) {
                         // 选择下一个启用的角色进入城镇
                         switchHero(countHero)
+
                         // todo 处理可能出现的公告
+
                         // 进入深渊
                         SequenceClicker.runSequence(Dungeon.entryPastDungeon)
-                        // 切换状态
+
+                        // 更新是否在城镇
                         isTown = false
                         return false
                     }
@@ -94,6 +100,7 @@ class GameManager(private val context: Context) {
         }
         return false
     }
+
     /**
      * 状态判定
      */
@@ -137,13 +144,13 @@ class GameManager(private val context: Context) {
                 !currentHasPickUp -> {
                     when {
                         againLoc != null -> {
-                            Log.i(TAG, "点击：再次挑战")
+                            Log.d(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc)
                             delay(UI_CD*4)      // 点击后稍微缓冲
                             false
                         }
                         backLoc != null -> {
-                            Log.i(TAG, "点击：返回城镇")
+                            Log.d(TAG, "点击：返回城镇")
                             AutomationService.instance?.click(backLoc)
                             true // 告知 Service 任务切换回城镇模式
                         }
@@ -171,7 +178,7 @@ class GameManager(private val context: Context) {
     suspend fun switchHero(targetHero: Int): Boolean{
         var tmp = targetHero
         // 切换目标角色
-        Log.d(TAG,"选择角色${tmp+1}")
+        Log.i(TAG,"选择角色${tmp+1}")
 
         // 检测是否在角色选择界面
         if(!SequenceClicker.waitForImage(Dungeon.TPL_START_GAME))return false
@@ -197,15 +204,13 @@ class GameManager(private val context: Context) {
     }
 
     /**
-     * 返回角色选择 (深度优化版)
+     * 返回角色选择
      */
     suspend fun backSelectHero(): Boolean {
-        Log.d(TAG, "开始执行：返回角色选择流程 (无限重试模式)")
+        Log.d(TAG, "返回角色选择")
 
         // 循环打开设置菜单 ---
         while (true) {
-            Log.d(TAG, "全局返回操作")
-
             // 尝试返回
             AutomationService.instance?.performBack()
 
@@ -230,7 +235,7 @@ class GameManager(private val context: Context) {
         SequenceClicker.runSequence(listOf(Dungeon.TPL_SELECT_HERO))
 
         // --- 第四阶段：等待进入角色选择页面 (无限等待) ---
-        Log.d(TAG, "等待进入角色选择页面 (TPL_START_GAME)...")
+        Log.i(TAG, "等待进入角色选择页面...")
         return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME, 0)
     }
 
@@ -306,7 +311,7 @@ class GameManager(private val context: Context) {
             }
         }
 
-        Log.d(TAG, "神秘商店任务执行完毕")
+        Log.i(TAG, "神秘商店任务执行完毕")
         AutomationService.instance?.performBack()
         return true
     }
@@ -325,10 +330,11 @@ class GameManager(private val context: Context) {
             delay(1200L)
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
-                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_EMAIL)
-                if (foundMenu != null) {
+                val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_EMAIL)
+                if (emailLoc != null) {
                     Log.d(TAG, "检测到邮件图标")
-                    break // 菜单已开，跳出循环
+                    AutomationService.instance?.click(emailLoc)
+                    break
                 }
             } finally {
                 frame.recycle()
@@ -342,7 +348,7 @@ class GameManager(private val context: Context) {
             return false
         }
 
-        Log.d(TAG, "点击领取邮件")
+        Log.i(TAG, "点击领取邮件")
         AutomationService.instance?.click(loc)
         return true
     }

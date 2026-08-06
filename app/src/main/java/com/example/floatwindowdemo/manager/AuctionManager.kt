@@ -149,11 +149,8 @@ class AuctionManager(private val context: Context) {
     private suspend fun doPurchase(price: Long, qty: Long) {
         // 设置购买数量
         val tmpQty = targetQty-purchasedQty
-        Log.i(TAG,"尝试购买单价: $price, 数量: $tmpQty")
-        // 喵提醒
-        if (miaoCode != null) postMiao(miaoCode, "尝试购买单价:$price, 数量:$qty \n" +
-                "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
-
+        Log.i(TAG,"尝试购买单价: $price, 数量: $tmpQty" +
+            "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
         if (targetQty != 0L && tmpQty < qty){
             // 此时需要手动输入数量
             SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
@@ -173,7 +170,7 @@ class AuctionManager(private val context: Context) {
 
         // 执行点击购买
         if (SequenceClicker.runSequence(Auction.buyList)) {
-            Log.d(TAG, "等待购买成功弹窗并识别...")
+            Log.i(TAG, "等待购买...")
             var successFound = false
             val maxRetries = 10
 
@@ -193,7 +190,9 @@ class AuctionManager(private val context: Context) {
                     val sQty = extractQuantity(rawText)
                     
                     if (sPrice > 0 && sQty > 0) {
-                        Log.i(TAG, "购买成功: 总价: $sPrice, 数量: $sQty")
+                        Log.i(TAG, "购买成功: 总价: $sPrice, 数量: $sQty" +
+                                "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
+
                         purchasedQty += sQty
                         successFound = true
                         // 喵提醒
