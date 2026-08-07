@@ -186,11 +186,12 @@ class GameManager(private val context: Context) {
                 if (emailLoc != null && confirmLoc == null) {
                     // 以神秘商店与确认按钮来判断是否成功进入游戏
                     count++
+                }else{
+                    // 尝试返回
+                    AutomationService.instance?.performBack()
+                    // 给 UI 反应时间
+                    delay(1200L)
                 }
-                // 尝试返回
-                AutomationService.instance?.performBack()
-                // 给 UI 反应时间
-                delay(1200L)
             } finally {
                 frame.recycle()
             }
