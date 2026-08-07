@@ -84,7 +84,8 @@ class GameManager(private val context: Context) {
                         // 选择下一个启用的角色进入城镇
                         switchHero(countHero)
 
-                        // todo 处理可能出现的公告
+                        // 处理可能出现的公告
+                        closeAd()
 
                         // 进入深渊
                         SequenceClicker.runSequence(Dungeon.entryPastDungeon)
@@ -170,6 +171,31 @@ class GameManager(private val context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * 关闭可能的公告
+     */
+    suspend fun  closeAd(): Boolean{
+        // 循环寻找神秘商店图标
+        while (true) {
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)
+                val confirmLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_CONFIRM)
+                if (emailLoc != null && confirmLoc == null) {
+                    Log.i(TAG, "成功进入游戏")
+                    break
+                }
+                // 尝试返回
+                AutomationService.instance?.performBack()
+                // 给 UI 反应时间
+                delay(1200L)
+            } finally {
+                frame.recycle()
+            }
+        }
+        return true
     }
 
     /**
