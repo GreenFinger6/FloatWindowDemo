@@ -177,15 +177,15 @@ class GameManager(private val context: Context) {
      * 关闭可能的公告
      */
     suspend fun  closeAd(): Boolean{
-        // 循环寻找神秘商店图标
-        while (true) {
+        var count = 0 // 连续5帧符合条件才成功进入
+        while (count < 5) {
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
                 val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)
                 val confirmLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_CONFIRM)
                 if (emailLoc != null && confirmLoc == null) {
-                    Log.i(TAG, "成功进入游戏")
-                    break
+                    // 以神秘商店与确认按钮来判断是否成功进入游戏
+                    count++
                 }
                 // 尝试返回
                 AutomationService.instance?.performBack()
@@ -195,6 +195,7 @@ class GameManager(private val context: Context) {
                 frame.recycle()
             }
         }
+        Log.i(TAG, "成功进入游戏")
         return true
     }
 
@@ -207,8 +208,9 @@ class GameManager(private val context: Context) {
         Log.i(TAG,"选择角色${tmp+1}")
 
         // 检测是否在角色选择界面
-        if(!SequenceClicker.waitForImage(Dungeon.TPL_START_GAME))return false
-        delay(UI_CD*10)
+        if(SequenceClicker.waitForImage(Dungeon.TPL_START_GAME)){
+            delay(UI_CD*10) // 等待可能的卡顿
+        }
 
         // 开始向下滑动
         while (tmp >= 5){
@@ -225,8 +227,7 @@ class GameManager(private val context: Context) {
         // 开始游戏
         SequenceClicker.runSequence(listOf(Dungeon.TPL_START_GAME))
 
-        // 检测是否出现委托
-        return SequenceClicker.waitForImage(Dungeon.TPL_TASK_MENU)
+        return true
     }
 
     /**
@@ -256,13 +257,12 @@ class GameManager(private val context: Context) {
             // 如果没跳出，会继续下一轮点击设置
         }
 
-        // --- 第三阶段：执行选择角色序列 ---
-        // 这里使用之前封装好的 runSequence，它内部也有消失检测机制
+        // 选择角色
         SequenceClicker.runSequence(listOf(Dungeon.TPL_SELECT_HERO))
 
-        // --- 第四阶段：等待进入角色选择页面 (无限等待) ---
+        // 等待进入角色选择页面
         Log.i(TAG, "等待进入角色选择页面...")
-        return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME, 0)
+        return SequenceClicker.waitForImage(Dungeon.TPL_START_GAME)
     }
 
     /**
