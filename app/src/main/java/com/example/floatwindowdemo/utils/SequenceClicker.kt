@@ -91,9 +91,8 @@ object SequenceClicker {
     private suspend fun isTargetPresent(targetName: String): Boolean {
         val frame = ScreenCaptureManager.frameFlow.first()
         return try {
-            val template = OpencvUtil.templateCache[targetName]
             withContext(Dispatchers.Default) {
-                if (template != null) OpencvUtil.findImage(frame, template) != null else false
+                OpencvUtil.findInFrame(frame, targetName) != null
             }
         } finally {
             frame.recycle()
@@ -105,13 +104,12 @@ object SequenceClicker {
      */
     private suspend fun isStableDisappear(targetName: String): Boolean {
         var consecutiveCount = 0
-        val template = OpencvUtil.templateCache[targetName] ?: return false
 
         for (i in 0 until 20) { // 最多找 20 帧
             val bitmap = ScreenCaptureManager.frameFlow.first()
             val loc = try {
                 withContext(Dispatchers.Default) {
-                    OpencvUtil.findImage(bitmap, template)
+                    OpencvUtil.findInFrame(bitmap, targetName)
                 }
             } finally {
                 bitmap.recycle()
@@ -146,13 +144,10 @@ object SequenceClicker {
             while (!found) {
                 val frame = ScreenCaptureManager.frameFlow.first()
                 try {
-                    val template = OpencvUtil.templateCache[templateName]
-                    if (template != null) {
-                        val loc = withContext(Dispatchers.Default) {
-                            OpencvUtil.findImage(frame, template)
-                        }
-                        if (loc != null) found = true
+                    val loc = withContext(Dispatchers.Default) {
+                        OpencvUtil.findInFrame(frame, templateName)
                     }
+                    if (loc != null) found = true
                 } finally {
                     frame.recycle()
                 }

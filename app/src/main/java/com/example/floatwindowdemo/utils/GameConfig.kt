@@ -114,6 +114,9 @@ object Dungeon {
     // 状态检测类模板
     const val TPL_RE_CHALLENGE = "button_re_challenge" // 再次挑战
     const val TPL_BACK_2_TOWN = "button_back2town"     // 返回城镇
+    const val TPL_REPAIR_EQUIP = "button_repairEquip"     // 修理装备
+    const val TPL_REPAIR_EQUIP1 = "button_repairEquip1"     // 修理装备1
+    const val TPL_CLOSE = "button_close"     // 关闭
     const val TPL_TASK_MENU = "button_task"            // 委托菜单
     const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊
     const val TPL_CONFIRM = "button_confirm"           // 确认
@@ -139,6 +142,9 @@ object Dungeon {
     val allTemplates = listOf(
         TPL_RE_CHALLENGE,
         TPL_BACK_2_TOWN,
+        TPL_REPAIR_EQUIP,
+        TPL_REPAIR_EQUIP1,
+        TPL_CLOSE,
         TPL_TASK_MENU,
         TPL_DUNGEON_TAB,
         TPL_CONFIRM,
@@ -186,5 +192,12 @@ object Dungeon {
         TPL_DECOMPOSE2,
         TPL_DECOMPOSE_CONFIRM,
         TPL_CONFIRM
+    )
+
+    // 修理装备
+    val repairEquipment = listOf(
+        TPL_REPAIR_EQUIP,
+        TPL_REPAIR_EQUIP1,
+        TPL_CLOSE
     )
 }

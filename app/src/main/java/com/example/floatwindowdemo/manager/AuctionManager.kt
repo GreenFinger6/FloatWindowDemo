@@ -67,21 +67,12 @@ class AuctionManager(private val context: Context) {
      * 识别当前页面状态
      */
     suspend fun detectCurrentState(bitmap: Bitmap): AuctionState = withContext(Dispatchers.Default) {
-        // 1. 获取模板
-        val template1 = OpencvUtil.templateCache[Auction.TPL_PURCHASE]
-        val template2 = OpencvUtil.templateCache[Auction.TPL_DETAIL]
-
-        if (template1 == null || template2 == null){
-            Log.e(TAG,"状态模版加载失败")
-            return@withContext AuctionState.RECOVERY
-        }
-
-        // 2. 并行启动两个识别任务
+        // 并行启动两个识别任务
         val listMatch = async {
-            OpencvUtil.findImage(bitmap, template1, 0.9)
+            OpencvUtil.findInFrame(bitmap, Auction.TPL_PURCHASE, 0.9)
         }
         val detailMatch = async {
-            OpencvUtil.findImage(bitmap, template2, 0.9)
+            OpencvUtil.findInFrame(bitmap, Auction.TPL_DETAIL, 0.9)
         }
 
         // 3. 等待结果并决策
@@ -112,17 +103,8 @@ class AuctionManager(private val context: Context) {
         val price = extractPrice(rawText)
         val quantity = extractQuantity(rawText)
 
-        // 价格稳定，且出现多帧之后才确定
-        if (price > 0 && price == lastPrice && quantity > 0) {
-            consecutiveCount++
-        } else {
-            lastPrice = price
-            consecutiveCount = 0
-            return // 价格变动，等下一帧
-        }
-
-        if (consecutiveCount >= 1) {
-            // --- 价格已稳定，执行业务逻辑 ---
+        // 成功识别到价格
+        if (price > 0 && quantity > 0) {
             Log.d(TAG,"当前价格: $price, 数量: $quantity")
 
             // 更新最低价格
@@ -134,16 +116,12 @@ class AuctionManager(private val context: Context) {
             if (isPriceOk && isQtyOk) {
                 doPurchase(price, quantity)
             }
-
-            // 操作完后，返回商品列表
-            AutomationService.instance?.click(Auction.Buttons.Back)
-            // 等待界面弹出
-            delay(UI_CD)
-
-            // 重置步骤，进入下一次循环
-            lastPrice = -1L
-            consecutiveCount = 0
         }
+
+        // 操作完后，返回商品列表
+        AutomationService.instance?.click(Auction.Buttons.Back)
+        // 等待界面弹出
+        delay(UI_CD)
     }
 
     private suspend fun doPurchase(price: Long, qty: Long) {
@@ -154,7 +132,7 @@ class AuctionManager(private val context: Context) {
         if (targetQty != 0L && tmpQty < qty){
             // 此时需要手动输入数量
             SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
-        }else{
+        }else if(qty != 1L){
             // 此时点击最大数量输入
             SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
         }
@@ -169,10 +147,10 @@ class AuctionManager(private val context: Context) {
         }
 
         // 执行点击购买
-        if (SequenceClicker.runSequence(Auction.buyList)) {
+        if (SequenceClicker.runSequence(Auction.buyList, false)) {
             Log.i(TAG, "等待购买...")
             var successFound = false
-            val maxRetries = 10
+            val maxRetries = 5
 
             repeat(maxRetries) {
                 if (successFound) return@repeat

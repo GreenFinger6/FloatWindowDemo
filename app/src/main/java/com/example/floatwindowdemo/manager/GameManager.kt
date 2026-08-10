@@ -8,6 +8,7 @@ import com.example.floatwindowdemo.utils.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -37,17 +38,14 @@ class GameManager(private val context: Context) {
         if(countHero > roleList.size) return true
 
         // 全局拦截器：优先处理确认弹窗（防止其阻塞所有逻辑）
-        val tplConfirm = OpencvUtil.templateCache[Dungeon.TPL_CONFIRM]
-        if (tplConfirm != null) {
-            val confirmLoc = withContext(Dispatchers.Default) {
-                OpencvUtil.findImage(bitmap, tplConfirm)
-            }
-            if (confirmLoc != null) {
-                Log.d(TAG, "检测到确认弹窗，优先点击处理")
-                AutomationService.instance?.click(confirmLoc)
-                // 处理了弹窗后，本帧直接返回，不执行后续状态逻辑，等下一帧环境“干净”后再检测
-                return false
-            }
+        val confirmLoc = withContext(Dispatchers.Default) {
+            OpencvUtil.findInFrame(bitmap, Dungeon.TPL_CONFIRM)
+        }
+        if (confirmLoc != null) {
+            Log.d(TAG, "检测到确认弹窗，优先点击处理")
+            AutomationService.instance?.click(confirmLoc)
+            // 处理了弹窗后，本帧直接返回，不执行后续状态逻辑，等下一帧环境“干净”后再检测
+            return false
         }
 
         // 3. 状态分发逻辑
@@ -127,17 +125,15 @@ class GameManager(private val context: Context) {
         }
 
         return withContext(Dispatchers.Default) {
-            val tplAgain = OpencvUtil.templateCache[Dungeon.TPL_RE_CHALLENGE]
-            val tplBack = OpencvUtil.templateCache[Dungeon.TPL_BACK_2_TOWN]
+            // 1. 并行启动三个识别任务
+            val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
+            val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN) }
+            val repairMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_REPAIR_EQUIP) }
 
-
-            if (tplAgain == null || tplBack == null) {
-                Log.e(TAG, "状态模版缺失，跳过本帧")
-                return@withContext false
-            }
-
-            val againLoc = OpencvUtil.findImage(bitmap, tplAgain)
-            val backLoc = OpencvUtil.findImage(bitmap, tplBack)
+            // 2. 等待识别结果
+            val againLoc = againMatch.await()
+            val backLoc = backMatch.await()
+            val repairLoc = repairMatch.await()
 
             // 3. 业务决策逻辑 (分支流转)
             when {
@@ -148,6 +144,11 @@ class GameManager(private val context: Context) {
                             Log.d(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc)
                             delay(UI_CD*4)      // 点击后稍微缓冲
+                            false
+                        }
+                        repairLoc != null ->{
+                            Log.d(TAG, "点击：修理装备")
+                            SequenceClicker.runSequence(Dungeon.repairEquipment)
                             false
                         }
                         backLoc != null -> {
@@ -177,8 +178,8 @@ class GameManager(private val context: Context) {
      * 关闭可能的公告
      */
     suspend fun  closeAd(): Boolean{
-        var count = 0 // 连续5帧符合条件才成功进入
-        while (count < 5) {
+        var count = 0 // 连续帧符合条件才成功进入
+        while (count < 15) {
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
                 val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)

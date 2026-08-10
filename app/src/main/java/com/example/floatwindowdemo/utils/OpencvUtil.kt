@@ -28,13 +28,13 @@ object OpencvUtil {
     /**
      * 辅助：在单帧中快速查找目标
      */
-    suspend fun findInFrame(bitmap: Bitmap, targetName: String): Point? {
+    suspend fun findInFrame(bitmap: Bitmap, targetName: String, threshold: Double = 0.85): Point? {
         val template = templateCache[targetName] ?: run {
             Log.e(TAG, "缺失识别模板：$targetName")
             return null
         }
         return withContext(Dispatchers.Default) {
-            findImage(bitmap, template)
+            findImage(bitmap, template, threshold)
         }
     }
 
