@@ -125,20 +125,21 @@ class GameManager(private val context: Context) {
         }
 
         return withContext(Dispatchers.Default) {
-            // 1. 并行启动三个识别任务
-            val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
-            val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN) }
-            val repairMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_REPAIR_EQUIP) }
-
-            // 2. 等待识别结果
-            val againLoc = againMatch.await()
-            val backLoc = backMatch.await()
-            val repairLoc = repairMatch.await()
-
-            // 3. 业务决策逻辑 (分支流转)
+            // 业务决策逻辑 (分支流转)
             when {
                 // 优先级 : 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
                 !currentHasPickUp -> {
+
+                    // 1. 并行启动三个识别任务
+                    val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
+                    val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN) }
+                    val repairMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_REPAIR_EQUIP) }
+
+                    // 2. 等待识别结果
+                    val againLoc = againMatch.await()
+                    val backLoc = backMatch.await()
+                    val repairLoc = repairMatch.await()
+
                     when {
                         againLoc != null -> {
                             Log.d(TAG, "点击：再次挑战")
