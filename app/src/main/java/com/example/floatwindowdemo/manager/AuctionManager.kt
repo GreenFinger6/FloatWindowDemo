@@ -129,22 +129,23 @@ class AuctionManager(private val context: Context) {
         attemptBuyCount++
 
         // 设置购买数量
-        val tmpQty = targetQty-purchasedQty
+        val remainQty = targetQty-purchasedQty
         Log.i(TAG,"尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
-        // 是否需要输入最大数量
-        if (targetQty != 0L && tmpQty < qty){
-            // 此时需要手动输入数量
-            SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
+        if(remainQty == 1L){
+            // 剩余数量为1时直接购买
+        }else if (targetQty == 0L  || remainQty >= qty){
+            // 无限数量或剩余购买数量大于等于🐚购买数量时，直接最大输入
+            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
+        }else {
+            // 此时需要输入具体数字
+            SequenceClicker.runSequence(Auction.getNumberTemplates(remainQty), false)
 
             // 处理输入确认, 不知道什么原因无法通过模版识别点击准确位置，只能点击偏移坐标
             val bitmap = ScreenCaptureManager.frameFlow.first()
             if (OpencvUtil.findInFrame(bitmap,Auction.TPL_INPUT_CONFIRM) != null) {
                 AutomationService.instance?.click(Auction.Buttons.InputNum)
             }
-        }else if(qty != 1L){
-            // 此时点击最大数量输入
-            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
         }
 
         // 执行点击购买

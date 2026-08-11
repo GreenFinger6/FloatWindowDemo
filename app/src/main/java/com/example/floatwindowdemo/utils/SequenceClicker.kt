@@ -60,6 +60,7 @@ object SequenceClicker {
                         }else{
                             // 快速点击模式
                             index++
+                            delay(60L) // 步骤间冷却
                         }
                     }
 
