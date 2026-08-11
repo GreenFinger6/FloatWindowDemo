@@ -136,24 +136,22 @@ class AuctionManager(private val context: Context) {
         if (targetQty != 0L && tmpQty < qty){
             // 此时需要手动输入数量
             SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
-        }else if(qty != 1L){
-            // 此时点击最大数量输入
-            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
-        }
 
-        // 处理可能的输入确认, 不知道什么原因无法通过模版识别点击准确位置，只能点击偏移坐标
-        while(true){
+            // 处理输入确认, 不知道什么原因无法通过模版识别点击准确位置，只能点击偏移坐标
             val bitmap = ScreenCaptureManager.frameFlow.first()
             if (OpencvUtil.findInFrame(bitmap,Auction.TPL_INPUT_CONFIRM) != null) {
                 AutomationService.instance?.click(Auction.Buttons.InputNum)
-            }else break
+            }
+        }else if(qty != 1L){
+            // 此时点击最大数量输入
+            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
         }
 
         // 执行点击购买
         if (SequenceClicker.runSequence(Auction.buyList, false)) {
             Log.i(TAG, "等待购买...")
             var successFound = false
-            val maxRetries = 5
+            val maxRetries = 10
 
             repeat(maxRetries) {
                 if (successFound) return@repeat

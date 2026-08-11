@@ -42,7 +42,7 @@ object SequenceClicker {
             try {
                 // 2. 并行（逻辑上）检测当前目标和上一步目标
                 val currentLoc = OpencvUtil.findInFrame(bitmap, target)
-                val prevLoc = if (prevTarget != null) OpencvUtil.findInFrame(bitmap, prevTarget) else null
+                val prevLoc = if (isDisappear && prevTarget != null) OpencvUtil.findInFrame(bitmap, prevTarget) else null
 
                 when {
                     // A. 贪婪匹配：当前目标出现了
@@ -60,12 +60,11 @@ object SequenceClicker {
                         }else{
                             // 快速点击模式
                             index++
-                            delay(100L) // 步骤间冷却
                         }
                     }
 
                     // B. 回退重试：当前不见，但上一步还在
-                    !isDisappear && prevLoc != null -> {
+                    prevLoc != null -> {
                         Log.w(TAG, "当前 $target 不见，但上步 $prevTarget 仍在，尝试补点回退...")
                         AutomationService.instance?.click(prevLoc.x.toFloat(), prevLoc.y.toFloat())
                         delay(1000L) // 给 UI 一点反应时间，继续当前循环
