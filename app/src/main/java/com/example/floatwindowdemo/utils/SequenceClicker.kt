@@ -58,8 +58,8 @@ object SequenceClicker {
                                 delay(500L) // 步骤间冷却
                             }
                         }else{
+                            // 快速点击模式
                             index++
-                            delay(500L) // 步骤间冷却
                         }
                     }
 

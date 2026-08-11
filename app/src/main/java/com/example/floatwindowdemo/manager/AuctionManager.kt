@@ -142,7 +142,6 @@ class AuctionManager(private val context: Context) {
             val bitmap = ScreenCaptureManager.frameFlow.first()
             if (OpencvUtil.findInFrame(bitmap,Auction.TPL_INPUT_CONFIRM) != null) {
                 AutomationService.instance?.click(Auction.Buttons.InputNum)
-                delay(UI_CD)
             }else break
         }
 
