@@ -142,18 +142,18 @@ class GameManager(private val context: Context) {
 
                     when {
                         againLoc != null -> {
-                            Log.d(TAG, "点击：再次挑战")
+                            Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc)
                             delay(UI_CD*4)      // 点击后稍微缓冲
                             false
                         }
                         repairLoc != null ->{
-                            Log.d(TAG, "点击：修理装备")
+                            Log.i(TAG, "点击：修理装备")
                             SequenceClicker.runSequence(Dungeon.repairEquipment)
                             false
                         }
                         backLoc != null -> {
-                            Log.d(TAG, "点击：返回城镇")
+                            Log.i(TAG, "点击：返回城镇")
                             AutomationService.instance?.click(backLoc)
                             true // 告知 Service 任务切换回城镇模式
                         }
