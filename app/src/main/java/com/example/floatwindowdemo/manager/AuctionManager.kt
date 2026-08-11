@@ -23,13 +23,13 @@ enum class AuctionState {
 
 class AuctionManager(private val context: Context) {
     private val TAG = "AuctionManager"
-    private val UI_CD = 500L // UI延迟，ms
+    private val UI_CD = 100L // UI延迟，ms
 
     // 业务内部状态
-    private var lastPrice = -1L // 最后一次识别到的价格
     private var minPrice = Long.MAX_VALUE // 最低识别价格
-    private var consecutiveCount = 0 // 观察到帧计数
     private var purchasedQty = 0L // 已购买数量
+    private var attemptBuyCount = 0// 尝试购买次数
+    private var successBuyCount = 0// 成功购买次数
 
     // 从配置中读取
     private val config = ConfigManager.getAuctionConfig(context)
@@ -125,10 +125,14 @@ class AuctionManager(private val context: Context) {
     }
 
     private suspend fun doPurchase(price: Long, qty: Long) {
+        // 尝试购买
+        attemptBuyCount++
+
         // 设置购买数量
         val tmpQty = targetQty-purchasedQty
-        Log.i(TAG,"尝试购买单价: $price, 数量: $tmpQty" +
-            "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
+        Log.i(TAG,"尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
+
+        // 是否需要输入最大数量
         if (targetQty != 0L && tmpQty < qty){
             // 此时需要手动输入数量
             SequenceClicker.runSequence(Auction.getNumberTemplates(tmpQty), false)
@@ -167,14 +171,16 @@ class AuctionManager(private val context: Context) {
                     val sQty = extractQuantity(rawText)
                     
                     if (sPrice > 0 && sQty > 0) {
-                        Log.i(TAG, "购买成功: 总价: $sPrice, 数量: $sQty" +
-                                "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
+                        // 购买成功
+                        successBuyCount++
+                        val info = "购买成功总价:$sPrice, 数量:$sQty 已购数：$purchasedQty, 最低单:$minPrice, 购买成功率: ${successBuyCount.toDouble() / attemptBuyCount}"
+                        Log.i(TAG, info)
+                        // 喵提醒
+                        if (miaoCode != null) postMiao(miaoCode, info)
 
                         purchasedQty += sQty
                         successFound = true
-                        // 喵提醒
-                        if (miaoCode != null) postMiao(miaoCode, "购买成功: 总价:$sPrice, 数量:$sQty \n" +
-                                "当前已购买数量：$purchasedQty, 目前出现最低单价:$minPrice")
+
                     }
                 } finally {
                     successBitmap.recycle()

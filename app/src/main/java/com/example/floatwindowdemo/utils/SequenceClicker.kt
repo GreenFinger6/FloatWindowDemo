@@ -60,11 +60,12 @@ object SequenceClicker {
                         }else{
                             // 快速点击模式
                             index++
+                            delay(100L) // 步骤间冷却
                         }
                     }
 
                     // B. 回退重试：当前不见，但上一步还在
-                    prevLoc != null -> {
+                    !isDisappear && prevLoc != null -> {
                         Log.w(TAG, "当前 $target 不见，但上步 $prevTarget 仍在，尝试补点回退...")
                         AutomationService.instance?.click(prevLoc.x.toFloat(), prevLoc.y.toFloat())
                         delay(1000L) // 给 UI 一点反应时间，继续当前循环
@@ -72,7 +73,7 @@ object SequenceClicker {
 
                     // C. 都没发现：可能在转场、加载或彻底跑偏
                     else -> {
-                        delay(500L)
+                        delay(50L)
                     }
                 }
             } finally {
