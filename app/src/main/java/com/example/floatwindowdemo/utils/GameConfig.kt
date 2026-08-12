@@ -22,7 +22,7 @@ object Auction {
         val SUCCESS_BUY = RectArea(0.4268f, 0.6f, 0.6621f, 0.6556f)
 
         // 拍卖行最低价区域
-        val MIN_PRICE = RectArea(0.1148f, 0.4306f, 0.4770f, 0.5056f)
+        val MIN_PRICE = RectArea(0.1148f, 0.4194f, 0.4770f, 0.5083f)
     }
 
     // 状态检测类模板
