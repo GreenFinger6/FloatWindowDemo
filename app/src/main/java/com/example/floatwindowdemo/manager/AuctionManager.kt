@@ -132,8 +132,8 @@ class AuctionManager(private val context: Context) {
         val remainQty = targetQty-purchasedQty
         Log.i(TAG,"尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
-        if(remainQty == 1L){
-            // 剩余数量为1时直接购买
+        if(qty == 1L || remainQty == 1L){
+            // 可购买数量or剩余数量为1时直接购买
         }else if (targetQty == 0L  || remainQty >= qty){
             // 无限数量或剩余购买数量大于等于🐚购买数量时，直接最大输入
             SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
