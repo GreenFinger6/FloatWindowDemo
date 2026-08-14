@@ -106,7 +106,7 @@ object SequenceClicker {
     private suspend fun isStableDisappear(targetName: String): Boolean {
         var consecutiveCount = 0
 
-        for (i in 0 until 20) { // 最多找 20 帧
+        for (i in 0 until 10) { // 最多找 10 帧
             val bitmap = ScreenCaptureManager.frameFlow.first()
             val loc = try {
                 withContext(Dispatchers.Default) {
