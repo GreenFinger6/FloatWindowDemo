@@ -189,14 +189,13 @@ class AuctionManager(private val context: Context) {
                     if (sPrice > 0 && sQty > 0) {
                         // 购买成功
                         successBuyCount++
+                        purchasedQty += sQty
+                        successFound = true
+
                         val info = "购买成功总价:$sPrice, 数量:$sQty; 已购数：$purchasedQty, 最低价:$minPrice, 成功率: ${successBuyCount.toDouble() / attemptBuyCount}"
                         Log.i(TAG, info)
                         // 喵提醒
                         if (miaoCode != null) postMiao(miaoCode, info)
-
-                        purchasedQty += sQty
-                        successFound = true
-
                     }
                 } finally {
                     successBitmap.recycle()
