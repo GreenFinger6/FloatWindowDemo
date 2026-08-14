@@ -197,7 +197,6 @@ object Dungeon {
     // 修理装备
     val repairEquipment = listOf(
         TPL_REPAIR_EQUIP,
-        TPL_REPAIR_EQUIP1,
-        TPL_CLOSE
+        TPL_REPAIR_EQUIP1
     )
 }

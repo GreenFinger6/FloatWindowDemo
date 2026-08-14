@@ -149,7 +149,10 @@ class GameManager(private val context: Context) {
                         }
                         repairLoc != null ->{
                             Log.i(TAG, "点击：修理装备")
-                            SequenceClicker.runSequence(Dungeon.repairEquipment)
+                            if(SequenceClicker.runSequence(Dungeon.repairEquipment)){
+                                // 关闭维修装备窗口
+                                AutomationService.instance?.performBack()
+                            }
                             false
                         }
                         backLoc != null -> {
