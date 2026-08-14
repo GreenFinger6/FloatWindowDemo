@@ -6,6 +6,7 @@ import com.example.floatwindowdemo.service.AutomationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -164,5 +165,44 @@ object SequenceClicker {
             // timeoutMillis 为 0，无限等待
             checkLoop()
         }
+    }
+
+    /**
+     * 极速序列点击（Reactive 模式）
+     * 优势：一次订阅，毫秒级响应，彻底消除步骤间的帧等待。
+     */
+    suspend fun runFastSequence(taskList: List<String>): Boolean {
+        var index = 0
+        var isDone = false
+
+        Log.d(TAG, "启动极速序列: $taskList")
+
+        ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
+            try {
+                if (index >= taskList.size) {
+                    isDone = true
+                    return@collect
+                }
+
+                val target = taskList[index]
+                val currentLoc = OpencvUtil.findInFrame(bitmap, target)
+
+                if (currentLoc != null) {
+                    Log.d(TAG, "FastSequence: 发现 $target，立即点击")
+                    AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
+                    index++
+
+                    if (index >= taskList.size) {
+                        isDone = true
+                    } else {
+                        // 给 UI 极短的刷新时间
+                        delay(10L)
+                    }
+                }
+            } finally {
+                bitmap.recycle()
+            }
+        }
+        return true
     }
 }

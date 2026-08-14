@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withContext
 
 
@@ -147,69 +148,105 @@ class AuctionManager(private val context: Context) {
         attemptBuyCount++
 
         // 设置购买数量
-        val remainQty = targetQty-purchasedQty
-        Log.i(TAG,"尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
+        val remainQty = targetQty - purchasedQty
+        Log.i(TAG, "尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
-        if(qty == 1L || remainQty == 1L){
+        if (qty == 1L || remainQty == 1L) {
             // 可购买数量or剩余数量为1时直接购买
-        }else if (targetQty == 0L  || remainQty >= qty){
-            // 无限数量或剩余购买数量大于等于🐚购买数量时，直接最大输入
+        } else if (targetQty == 0L || remainQty >= qty) {
+            // 无限数量或剩余购买数量大于等于当前识别到可购买数量时，直接最大输入
             SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
-        }else {
+            delay(UI_CD)
+        } else {
             // 此时需要输入具体数字
             SequenceClicker.runSequence(Auction.getNumberTemplates(remainQty), false)
 
-            // 处理输入确认, 不知道什么原因无法通过模版识别点击准确位置，只能点击偏移坐标
-            val bitmap = ScreenCaptureManager.frameFlow.first()
-            if (OpencvUtil.findInFrame(bitmap,Auction.TPL_INPUT_CONFIRM) != null) {
-                AutomationService.instance?.click(Auction.Buttons.InputNum)
+            // 处理输入确认
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                if (OpencvUtil.findInFrame(frame, Auction.TPL_INPUT_CONFIRM) != null) {
+                    AutomationService.instance?.click(Auction.Buttons.InputNum)
+                }
+            } finally {
+                frame.recycle()
             }
         }
 
-        // 执行点击购买
-        if (SequenceClicker.runSequence(Auction.buyList, false)) {
-            Log.i(TAG, "等待购买...")
+        // 执行极速两连点购买
+        if (fastTwoStepClick(Auction.TPL_BUY, Auction.TPL_CONFIRM)) {
+            Log.i(TAG, "等待购买结果识别...")
             var successFound = false
             val maxRetries = 10
 
-            repeat(maxRetries) {
+            repeat(maxRetries) { i ->
                 if (successFound) return@repeat
-
-                delay(UI_CD) // 给UI一点反应时间
+                delay(UI_CD)
                 val frame = ScreenCaptureManager.frameFlow.first()
                 val successBitmap = cropBitmap(Auction.Regions.SUCCESS_BUY, frame)
-                
+
                 try {
                     val rawText = withContext(Dispatchers.Default) {
                         OcrManager.recognizeTextAsync(successBitmap)
                     }
-                    
                     val sPrice = extractPrice(rawText)
                     val sQty = extractQuantity(rawText)
-                    
+
                     if (sPrice > 0 && sQty > 0) {
-                        // 购买成功
+                        Log.i(TAG, "购买成功识别成功(第${i + 1}帧): 总价: $sPrice, 数量: $sQty")
                         successBuyCount++
                         purchasedQty += sQty
                         successFound = true
 
                         val info = "购买成功总价:$sPrice, 数量:$sQty; 已购数：$purchasedQty, 最低价:$minPrice, 成功率: ${successBuyCount.toDouble() / attemptBuyCount}"
                         Log.i(TAG, info)
-                        // 喵提醒
                         if (miaoCode != null) postMiao(miaoCode, info)
                     }
                 } finally {
                     successBitmap.recycle()
+                    frame.recycle()
                 }
             }
-            
             if (!successFound) {
                 Log.w(TAG, "未能在预期时间内识别到购买成功信息")
-                // 兜底逻辑：如果识别不到，但点击了确定，purchasedQty 不更新或按预期更新需谨慎
             }
         }
 
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)
+        delay(UI_CD)
+    }
+
+    /**
+     * 极速两连点逻辑：锁定区域匹配，取消步骤延迟
+     */
+    private suspend fun fastTwoStepClick(buyTpl: String, confirmTpl: String): Boolean {
+        var buyClicked = false
+        var isDone = false // 任务完成标记
+
+        // 使用 takeWhile：只要 isDone 为 false 就继续监听，一旦变为 true 则停止监听
+        ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
+            try {
+                if (!buyClicked) {
+                    // 第一阶段：寻找并点击 Buy
+                    val buyLoc = OpencvUtil.findInRegion(bitmap, buyTpl, Auction.Regions.BUY_BTN, 0.7)
+                    if (buyLoc != null) {
+                        Log.d(TAG, "极速模式：点击 Buy")
+                        AutomationService.instance?.click(buyLoc)
+                        buyClicked = true
+                    }
+                } else {
+                    // 第二阶段：寻找并点击 Confirm
+                    val confirmLoc = OpencvUtil.findInRegion(bitmap, confirmTpl, Auction.Regions.CONFIRM_BTN, 0.7)
+                    if (confirmLoc != null) {
+                        Log.d(TAG, "极速模式：点击 Confirm")
+                        AutomationService.instance?.click(confirmLoc)
+                        isDone = true // 标记完成，触发 takeWhile 退出循环
+                    }
+                }
+            }finally {
+                bitmap.recycle()
+            }
+        }
+        return true
     }
 }

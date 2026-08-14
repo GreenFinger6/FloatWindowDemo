@@ -23,6 +23,10 @@ object Auction {
 
         // 拍卖行最低价区域
         val MIN_PRICE = RectArea(0.1148f, 0.4194f, 0.4770f, 0.5083f)
+
+        // 按钮快速匹配区域 (ROI)
+        val BUY_BTN = RectArea(0.505f, 0.6264f, 0.8833f, 0.9217f)
+        val CONFIRM_BTN = RectArea(0.4171f, 0.6652f, 0.6111f, 0.7847f)
     }
 
     // 状态检测类模板

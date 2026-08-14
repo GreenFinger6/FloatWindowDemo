@@ -39,6 +39,24 @@ object OpencvUtil {
     }
 
     /**
+     * 在指定区域内查找目标 (ROI 优化版)
+     */
+    suspend fun findInRegion(bitmap: Bitmap, targetName: String, region: RectArea, threshold: Double = 0.85): Point? {
+        val roiBitmap = cropBitmap(region, bitmap)
+        return try {
+            val localPoint = findInFrame(roiBitmap, targetName, threshold)
+            if (localPoint != null) {
+                // 将局部坐标转换回全局坐标
+                val globalX = region.x1 * bitmap.width + localPoint.x
+                val globalY = region.y1 * bitmap.height + localPoint.y
+                Point(globalX, globalY)
+            } else null
+        } finally {
+            if (roiBitmap != bitmap) roiBitmap.recycle() // 确保释放裁剪的图片
+        }
+    }
+
+    /**
      * 在源图(source)中查找模板图(template)
      * @param source 大图（通常是屏幕截图）
      * @param template 小图（你要找的图标或按钮）
