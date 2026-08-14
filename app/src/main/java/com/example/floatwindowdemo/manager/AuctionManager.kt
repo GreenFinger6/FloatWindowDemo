@@ -30,6 +30,7 @@ class AuctionManager(private val context: Context) {
     private var purchasedQty = 0L // 已购买数量
     private var attemptBuyCount = 0// 尝试购买次数
     private var successBuyCount = 0// 成功购买次数
+    private var lastPrice = 0L// 最后识别价格
 
     // 从配置中读取
     private val config = ConfigManager.getAuctionConfig(context)
@@ -103,6 +104,14 @@ class AuctionManager(private val context: Context) {
         val price = extractPrice(rawText)
         val quantity = extractQuantity(rawText)
 
+        // 价格稳定，且出现两帧之后才确定
+        if (price > 0 && price == lastPrice && quantity > 0) {
+            lastPrice = 0L
+        } else {
+            lastPrice = price
+            return // 价格待确认，等下一帧
+        }
+
         // 成功识别到价格
         if (price > 0 && quantity > 0) {
             Log.d(TAG,"当前价格: $price, 数量: $quantity")
@@ -172,7 +181,7 @@ class AuctionManager(private val context: Context) {
                     if (sPrice > 0 && sQty > 0) {
                         // 购买成功
                         successBuyCount++
-                        val info = "购买成功总价:$sPrice, 数量:$sQty 已购数：$purchasedQty, 最低单:$minPrice, 购买成功率: ${successBuyCount.toDouble() / attemptBuyCount}"
+                        val info = "购买成功总价:$sPrice, 数量:$sQty; 已购数：$purchasedQty, 最低价:$minPrice, 成功率: ${successBuyCount.toDouble() / attemptBuyCount}"
                         Log.i(TAG, info)
                         // 喵提醒
                         if (miaoCode != null) postMiao(miaoCode, info)
