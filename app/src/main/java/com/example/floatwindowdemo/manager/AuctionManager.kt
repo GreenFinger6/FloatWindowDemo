@@ -108,7 +108,7 @@ class AuctionManager(private val context: Context) {
 
         // 成功识别到价格
         if (price > 0 && quantity > 0) {
-            Log.d(TAG,"当前价格: $price, 数量: $quantity")
+            Log.d(TAG,"当前价格: $price, 数量: $quantity，目标价格：$targetPrice")
 
             // 更新最低价格
             if (price < minPrice) minPrice = price
