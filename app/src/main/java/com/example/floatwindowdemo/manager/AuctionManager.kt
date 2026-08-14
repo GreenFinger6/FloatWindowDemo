@@ -151,12 +151,13 @@ class AuctionManager(private val context: Context) {
         val remainQty = targetQty - purchasedQty
         Log.i(TAG, "尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
+        // 构造点击序列
+        var bList = Auction.buyList
         if (qty == 1L || remainQty == 1L) {
             // 可购买数量or剩余数量为1时直接购买
         } else if (targetQty == 0L || remainQty >= qty) {
             // 无限数量或剩余购买数量大于等于当前识别到可购买数量时，直接最大输入
-            SequenceClicker.runSequence(listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX), false)
-            delay(UI_CD)
+            bList = listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX) + Auction.buyList
         } else {
             // 此时需要输入具体数字
             SequenceClicker.runSequence(Auction.getNumberTemplates(remainQty), false)
@@ -172,8 +173,8 @@ class AuctionManager(private val context: Context) {
             }
         }
 
-        // 执行极速两连点购买
-        if (fastTwoStepClick(Auction.TPL_BUY, Auction.TPL_CONFIRM)) {
+        // 执行极速购买
+        if (SequenceClicker.runFastSequence(bList)) {
             Log.i(TAG, "等待购买结果识别...")
             var successFound = false
             val maxRetries = 10
