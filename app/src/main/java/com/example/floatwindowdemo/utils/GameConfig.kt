@@ -27,7 +27,7 @@ object Auction {
         // 按钮快速匹配区域 (ROI)
         val BUY_BTN = RectArea(0.505f, 0.6264f, 0.8833f, 0.9217f)
         val CONFIRM_BTN = RectArea(0.4171f, 0.6652f, 0.6111f, 0.7847f)
-        val INPUT_BTN = RectArea(0.7146f, 0.6388f, 0.7469f, 7027f)
+        val INPUT_BTN = RectArea(0.6822f, 0.6388f, 0.8439f, 0.7111f)
         val INPUT_MAX_BTN = RectArea(0.8270f, 0.7222f, 0.8973f, 0.8541f)
     }
 

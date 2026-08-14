@@ -121,7 +121,7 @@ object SequenceClicker {
                         isDone = true
                     } else {
                         // 步骤间极短延迟，防止 UI 响应不过来
-                        delay(10L)
+                        delay(30L)
                     }
                 }
             } finally {
