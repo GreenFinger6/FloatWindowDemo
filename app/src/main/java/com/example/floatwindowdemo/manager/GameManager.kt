@@ -162,7 +162,7 @@ class GameManager(private val context: Context) {
                         }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
-                            AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
+                            AutomationService.instance?.click(Dungeon.Buttons.Attack, 1000L)
                             false
                         }
                     }
@@ -171,7 +171,7 @@ class GameManager(private val context: Context) {
                 // 优先级 : 正常战斗/寻路阶段
                 else -> {
                     // 调用挂起式长按，此时协程会挂起 2s，collect 会自动跳过期间的帧
-                    AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
+                    AutomationService.instance?.click(Dungeon.Buttons.Attack, 1000L)
                     false
                 }
             }
