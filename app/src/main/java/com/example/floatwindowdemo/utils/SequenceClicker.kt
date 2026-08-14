@@ -105,6 +105,8 @@ object SequenceClicker {
                 }
 
                 val task = taskList[index]
+                Log.d(TAG, "等待 ${task.templateName} 出现...")
+
                 // 根据是否有 region 决定使用局部匹配还是全局匹配
                 val currentLoc = if (task.region != null) {
                     OpencvUtil.findInRegion(bitmap, task.templateName, task.region, task.threshold)
