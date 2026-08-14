@@ -37,6 +37,7 @@ class AuctionManager(private val context: Context) {
     private val config = ConfigManager.getAuctionConfig(context)
     val targetPrice = config.maxPrice  //设置的目标单价
     val targetQty = config.maxQuantity //设置的目标数量
+    val isGreedy = config.isGreedy //是否贪心
     private val miaoCode = ConfigManager.getMiaoCode(context) //喵提醒码
     /**
      * 核心逻辑入口：处理每一帧
@@ -151,18 +152,19 @@ class AuctionManager(private val context: Context) {
         val remainQty = targetQty - purchasedQty
         Log.i(TAG, "尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
-        // 构造极速点击任务序列 (带 ROI 区域)
+        // 构造极速点击任务序列
         val buyTasks = mutableListOf<ClickTask>()
-        
-        if (qty == 1L || remainQty == 1L) {
+
+        if (isGreedy || qty == 1L || remainQty == 1L) {
             // 直接购买
         } else if (targetQty == 0L || remainQty >= qty) {
-            // 点击最大数量操作
+            // 自动补全最大数量
             buyTasks.add(ClickTask(Auction.TPL_INPUT_NUM, Auction.Regions.INPUT_BTN, 0.7))
             buyTasks.add(ClickTask(Auction.TPL_INPUT_MAX, Auction.Regions.INPUT_MAX_BTN, 0.7))
         } else {
             // 手动输入模式 (使用旧的 runSequence 保证兼容性)
             SequenceClicker.runSequence(Auction.getNumberTemplates(remainQty), false)
+
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
                 if (OpencvUtil.findInFrame(frame, Auction.TPL_INPUT_CONFIRM) != null) {

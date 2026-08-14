@@ -10,6 +10,7 @@ object ConfigManager {
     // Key 常量定义
     private const val KEY_MAX_PRICE = "max_price" // 拍卖行最高价格
     private const val KEY_MAX_QUANTITY = "max_quantity" // 拍卖行最多数量
+    private const val KEY_IS_GREEDY = "is_greedy" // 是否贪心模式
     private const val KEY_MIAO_CODE = "miao_code" //喵提醒码
     private const val KEY_MAIN_TASK = "main_task" // 当前任务
     private const val KEY_ROLE_DATA = "role_data" // 存放 JSON 字符串
@@ -35,12 +36,14 @@ object ConfigManager {
         getPrefs(context).edit {
             putLong(KEY_MAX_PRICE, config.maxPrice)
             putLong(KEY_MAX_QUANTITY, config.maxQuantity)
+            putBoolean(KEY_IS_GREEDY, config.isGreedy)
         }
     }
     fun getAuctionConfig(context: Context) : AuctionConfig{
         val maxPrice = getPrefs(context).getLong(KEY_MAX_PRICE, 0L)
         val maxQuantity = getPrefs(context).getLong(KEY_MAX_QUANTITY, 0L)
-        return AuctionConfig(maxPrice, maxQuantity)
+        val isGreedy = getPrefs(context).getBoolean(KEY_IS_GREEDY, false)
+        return AuctionConfig(maxPrice, maxQuantity, isGreedy)
     }
 
     // --- 喵提醒 ---
@@ -59,7 +62,8 @@ object ConfigManager {
 // 拍卖行抢拍设置
 data class AuctionConfig(
     val maxPrice: Long = 0,
-    val maxQuantity: Long = 0
+    val maxQuantity: Long = 0,
+    val isGreedy: Boolean = false
 )
 
 

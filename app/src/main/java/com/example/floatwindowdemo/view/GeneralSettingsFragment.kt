@@ -82,6 +82,7 @@ class GeneralSettingsFragment : Fragment() {
         val auctionConfig = ConfigManager.getAuctionConfig(context)
         binding.editMaxPrice.setText(auctionConfig.maxPrice.toString())
         binding.editMaxQuantity.setText(auctionConfig.maxQuantity.toString())
+        binding.switchGreedyMode.isChecked = auctionConfig.isGreedy
 
         // 根据主任务索引切换UI面板
         updateTaskUI(taskIndex)
@@ -106,7 +107,8 @@ class GeneralSettingsFragment : Fragment() {
         // 拍卖行配置
         val price = binding.editMaxPrice.text.toString().toLongOrNull() ?: 0L
         val quantity = binding.editMaxQuantity.text.toString().toLongOrNull() ?: 0L
-        ConfigManager.saveAuctionConfig(context, AuctionConfig(price, quantity))
+        val isGreedy = binding.switchGreedyMode.isChecked
+        ConfigManager.saveAuctionConfig(context, AuctionConfig(price, quantity, isGreedy))
 
         // 保存角色配置
         saveAllRolesDetails()
