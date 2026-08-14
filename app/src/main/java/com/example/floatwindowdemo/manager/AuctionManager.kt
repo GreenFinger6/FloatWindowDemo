@@ -101,16 +101,8 @@ class AuctionManager(private val context: Context) {
         priceBitmap.recycle()
 
         // 使用正则从 String 中提取信息
-        val price = extractPrice(rawText)
+        var price = extractPrice(rawText)
         val quantity = extractQuantity(rawText)
-
-        // 价格稳定，且出现两帧之后才确定
-        if (price > 0 && price == lastPrice && quantity > 0) {
-            lastPrice = 0L
-        } else {
-            lastPrice = price
-            return // 价格待确认，等下一帧
-        }
 
         // 成功识别到价格
         if (price > 0 && quantity > 0) {
@@ -123,7 +115,23 @@ class AuctionManager(private val context: Context) {
             val isPriceOk = targetPrice == 0L || price <= targetPrice
             val isQtyOk = targetQty == 0L || purchasedQty <= targetQty
             if (isPriceOk && isQtyOk) {
-                doPurchase(price, quantity)
+
+                // 二次确认价格
+                val newBitmap = ScreenCaptureManager.frameFlow.first()
+                val newPriceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, newBitmap)
+                val newRawText = withContext(Dispatchers.Default) {
+                    OcrManager.recognizeTextAsync(newPriceBitmap)
+                }
+                newPriceBitmap.recycle()
+                newBitmap.recycle()
+                lastPrice = extractPrice(newRawText)
+
+                // 价格稳定，且出现两帧之后才确定
+                if (price != lastPrice) {
+                    Log.e(TAG,"价格不一致，首次: $price, 第二次: $lastPrice")
+                    // 此时以第二次识别价格为准并重新判断
+                    if (targetQty == 0L || lastPrice <= targetPrice) doPurchase(lastPrice, quantity)
+                }else doPurchase(price, quantity)
             }
         }
 
