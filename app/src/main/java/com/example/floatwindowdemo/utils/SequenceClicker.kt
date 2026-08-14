@@ -73,7 +73,7 @@ object SequenceClicker {
 
                     // C. 都没发现：可能在转场、加载或彻底跑偏
                     else -> {
-                        delay(50L)
+                        delay(10L)
                     }
                 }
             } finally {
