@@ -84,9 +84,15 @@ object OpencvUtil {
             Imgproc.cvtColor(tempMat, tempMat, Imgproc.COLOR_RGBA2GRAY)
 
             // 3. 创建结果矩阵
-            val result = Mat()
             val resultCols = srcMat.cols() - tempMat.cols() + 1
             val resultRows = srcMat.rows() - tempMat.rows() + 1
+
+            if (resultCols <= 0 || resultRows <= 0) {
+                Log.e(TAG, "模板图尺寸(${tempMat.cols()}x${tempMat.rows()})大于源图(${srcMat.cols()}x${srcMat.rows()})，跳过匹配")
+                return null
+            }
+
+            val result = Mat()
             result.create(resultRows, resultCols, CvType.CV_32FC1)
 
             // 4. 执行模板匹配 (使用归一化相关系数匹配法，效果最稳定)

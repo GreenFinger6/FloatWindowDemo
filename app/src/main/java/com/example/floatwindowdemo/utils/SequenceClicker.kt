@@ -88,14 +88,14 @@ object SequenceClicker {
     }
 
     /**
-     * 极速序列点击（Reactive 模式）
-     * 优势：一次订阅，毫秒级响应，彻底消除步骤间的帧等待。
+     * 极速序列点击（Reactive 模式 + ROI 支持）
+     * 优势：一次订阅，毫秒级响应，支持局部区域识别大幅提升性能。
      */
-    suspend fun runFastSequence(taskList: List<String>): Boolean {
+    suspend fun runFastSequence(taskList: List<ClickTask>): Boolean {
         var index = 0
         var isDone = false
 
-        Log.d(TAG, "启动极速序列: $taskList")
+        Log.d(TAG, "启动极速序列点击: ${taskList.map { it.templateName }}")
 
         ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
             try {
@@ -104,18 +104,23 @@ object SequenceClicker {
                     return@collect
                 }
 
-                val target = taskList[index]
-                val currentLoc = OpencvUtil.findInFrame(bitmap, target)
+                val task = taskList[index]
+                // 根据是否有 region 决定使用局部匹配还是全局匹配
+                val currentLoc = if (task.region != null) {
+                    OpencvUtil.findInRegion(bitmap, task.templateName, task.region, task.threshold)
+                } else {
+                    OpencvUtil.findInFrame(bitmap, task.templateName, task.threshold)
+                }
 
                 if (currentLoc != null) {
-                    Log.d(TAG, "FastSequence: 发现 $target，立即点击")
+                    Log.d(TAG, "发现 ${task.templateName}，立即点击")
                     AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
                     index++
 
                     if (index >= taskList.size) {
                         isDone = true
                     } else {
-                        // 给 UI 极短的刷新时间
+                        // 步骤间极短延迟，防止 UI 响应不过来
                         delay(10L)
                     }
                 }

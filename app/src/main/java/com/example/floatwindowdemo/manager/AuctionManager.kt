@@ -151,18 +151,18 @@ class AuctionManager(private val context: Context) {
         val remainQty = targetQty - purchasedQty
         Log.i(TAG, "尝试购买单价: $price, 数量: $qty 已购数：$purchasedQty, 最低价:$minPrice")
 
-        // 构造点击序列
-        var bList = Auction.buyList
+        // 构造极速点击任务序列 (带 ROI 区域)
+        val buyTasks = mutableListOf<ClickTask>()
+        
         if (qty == 1L || remainQty == 1L) {
-            // 可购买数量or剩余数量为1时直接购买
+            // 直接购买
         } else if (targetQty == 0L || remainQty >= qty) {
-            // 无限数量或剩余购买数量大于等于当前识别到可购买数量时，直接最大输入
-            bList = listOf(Auction.TPL_INPUT_NUM, Auction.TPL_INPUT_MAX) + Auction.buyList
+            // 点击最大数量操作
+            buyTasks.add(ClickTask(Auction.TPL_INPUT_NUM, Auction.Regions.INPUT_BTN, 0.7))
+            buyTasks.add(ClickTask(Auction.TPL_INPUT_MAX, Auction.Regions.INPUT_MAX_BTN, 0.7))
         } else {
-            // 此时需要输入具体数字
+            // 手动输入模式 (使用旧的 runSequence 保证兼容性)
             SequenceClicker.runSequence(Auction.getNumberTemplates(remainQty), false)
-
-            // 处理输入确认
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
                 if (OpencvUtil.findInFrame(frame, Auction.TPL_INPUT_CONFIRM) != null) {
@@ -173,8 +173,12 @@ class AuctionManager(private val context: Context) {
             }
         }
 
+        // 添加核心抢拍按钮 (ROI 强力加速)
+        buyTasks.add(ClickTask(Auction.TPL_BUY, Auction.Regions.BUY_BTN, 0.7))
+        buyTasks.add(ClickTask(Auction.TPL_CONFIRM, Auction.Regions.CONFIRM_BTN, 0.7))
+
         // 执行极速购买
-        if (SequenceClicker.runFastSequence(bList)) {
+        if (SequenceClicker.runFastSequence(buyTasks)) {
             Log.i(TAG, "等待购买结果识别...")
             var successFound = false
             val maxRetries = 10
@@ -215,39 +219,5 @@ class AuctionManager(private val context: Context) {
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)
         delay(UI_CD)
-    }
-
-    /**
-     * 极速两连点逻辑：锁定区域匹配，取消步骤延迟
-     */
-    private suspend fun fastTwoStepClick(buyTpl: String, confirmTpl: String): Boolean {
-        var buyClicked = false
-        var isDone = false // 任务完成标记
-
-        // 使用 takeWhile：只要 isDone 为 false 就继续监听，一旦变为 true 则停止监听
-        ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
-            try {
-                if (!buyClicked) {
-                    // 第一阶段：寻找并点击 Buy
-                    val buyLoc = OpencvUtil.findInRegion(bitmap, buyTpl, Auction.Regions.BUY_BTN, 0.7)
-                    if (buyLoc != null) {
-                        Log.d(TAG, "极速模式：点击 Buy")
-                        AutomationService.instance?.click(buyLoc)
-                        buyClicked = true
-                    }
-                } else {
-                    // 第二阶段：寻找并点击 Confirm
-                    val confirmLoc = OpencvUtil.findInRegion(bitmap, confirmTpl, Auction.Regions.CONFIRM_BTN, 0.7)
-                    if (confirmLoc != null) {
-                        Log.d(TAG, "极速模式：点击 Confirm")
-                        AutomationService.instance?.click(confirmLoc)
-                        isDone = true // 标记完成，触发 takeWhile 退出循环
-                    }
-                }
-            }finally {
-                bitmap.recycle()
-            }
-        }
-        return true
     }
 }
