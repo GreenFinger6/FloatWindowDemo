@@ -103,8 +103,8 @@ class AuctionManager(private val context: Context) {
         priceBitmap.recycle()
 
         // 使用正则从 String 中提取信息
-        var price = extractPrice(rawText)
-        val quantity = extractQuantity(rawText)
+        val price = extractPrice(rawText)
+        var quantity = extractQuantity(rawText)
 
         // 成功识别到价格
         if (price > 0 && quantity > 0) {
@@ -112,6 +112,8 @@ class AuctionManager(private val context: Context) {
 
             // 更新最低价格
             if (price < minPrice) minPrice = price
+            // 贪心模式限制购买数量
+            if (isGreedy) quantity = 1
 
             // 是否需要购买
             val isPriceOk = targetPrice == 0L || price <= targetPrice
@@ -133,7 +135,7 @@ class AuctionManager(private val context: Context) {
                         Log.e(TAG,"价格不一致，首次: $price, 第二次: $lastPrice")
                         // 此时以第二次识别价格为准并重新判断
                         if (targetQty == 0L || lastPrice <= targetPrice) doPurchase(lastPrice, quantity)
-                    }
+                    }else doPurchase(price, quantity)
                 } else doPurchase(price, quantity)
             }
         }
@@ -155,7 +157,7 @@ class AuctionManager(private val context: Context) {
         // 构造极速点击任务序列
         val buyTasks = mutableListOf<ClickTask>()
 
-        if (isGreedy || qty == 1L || remainQty == 1L) {
+        if (qty == 1L || remainQty == 1L) {
             // 直接购买
         } else if (targetQty == 0L || remainQty >= qty) {
             // 自动补全最大数量
