@@ -28,7 +28,7 @@ class AutomationService : AccessibilityService() {
     /**
      * 在屏幕指定坐标执行点击
      */
-    suspend fun click(x: Float, y: Float, duration: Long = 50L): Boolean =
+    suspend fun click(x: Float, y: Float, duration: Long = 100L): Boolean =
         suspendCancellableCoroutine { continuation ->
         // 获取当前屏幕的绝对像素宽高
         val metrics = resources.displayMetrics

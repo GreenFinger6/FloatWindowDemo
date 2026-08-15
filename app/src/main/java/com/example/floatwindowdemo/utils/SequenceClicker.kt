@@ -122,9 +122,7 @@ object SequenceClicker {
                     if (index >= taskList.size) {
                         isDone = true
                     } else {
-                        // 步骤间极短延迟，防止 UI 响应不过来
-                        if(index != 0 && task.templateName == "button_buy")delay(50L) // 购买操作与输入数量之间需要额外间隔
-                        else delay(10L)
+                        delay(10L)
                     }
                 }
             } finally {
