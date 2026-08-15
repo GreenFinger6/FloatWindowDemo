@@ -174,6 +174,7 @@ class AuctionManager(private val context: Context) {
                 }
             } finally {
                 frame.recycle()
+                delay(UI_CD)  // 购买操作与输入数量之间需要额外间隔
             }
         }
 
