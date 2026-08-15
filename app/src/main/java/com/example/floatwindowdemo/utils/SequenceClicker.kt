@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 序列点击执行器 - 单例优化版
@@ -88,48 +89,55 @@ object SequenceClicker {
     }
 
     /**
-     * 极速序列点击（Reactive 模式 + ROI 支持）
-     * 优势：一次订阅，毫秒级响应，支持局部区域识别大幅提升性能。
+     * 极速序列点击（带超时保护）
      */
-    suspend fun runFastSequence(taskList: List<ClickTask>): Boolean {
+    suspend fun runFastSequence(taskList: List<ClickTask>, timeoutMillis: Long = 5000L): Boolean {
         var index = 0
         var isDone = false
 
-        Log.d(TAG, "启动极速序列点击: ${taskList.map { it.templateName }}")
+        Log.d(TAG, "启动极速序列点击: ${taskList.map { it.templateName }}，超时设置: ${timeoutMillis}ms")
 
-        ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
-            try {
-                if (index >= taskList.size) {
-                    isDone = true
-                    return@collect
-                }
-
-                val task = taskList[index]
-                Log.d(TAG, "等待 ${task.templateName} 出现...")
-
-                // 根据是否有 region 决定使用局部匹配还是全局匹配
-                val currentLoc = if (task.region != null) {
-                    OpencvUtil.findInRegion(bitmap, task.templateName, task.region, task.threshold)
-                } else {
-                    OpencvUtil.findInFrame(bitmap, task.templateName, task.threshold)
-                }
-
-                if (currentLoc != null) {
-                    Log.d(TAG, "发现 ${task.templateName}，立即点击")
-                    AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
-                    index++
-
+        // 使用 withTimeoutOrNull 包裹 collect 过程
+        val success = withTimeoutOrNull(timeoutMillis.milliseconds) {
+            ScreenCaptureManager.frameFlow.takeWhile { !isDone }.collect { bitmap ->
+                try {
                     if (index >= taskList.size) {
                         isDone = true
-                    } else {
-                        delay(10L)
+                        return@collect
                     }
+
+                    val task = taskList[index]
+                    // 识别逻辑...
+                    val currentLoc = if (task.region != null) {
+                        OpencvUtil.findInRegion(bitmap, task.templateName, task.region, task.threshold)
+                    } else {
+                        OpencvUtil.findInFrame(bitmap, task.templateName, task.threshold)
+                    }
+
+                    if (currentLoc != null) {
+                        Log.d(TAG, "发现 ${task.templateName}，立即点击")
+                        AutomationService.instance?.click(currentLoc.x.toFloat(), currentLoc.y.toFloat())
+                        index++
+
+                        if (index >= taskList.size) {
+                            isDone = true
+                        } else {
+                            delay(10L) // 极速模式下的微小冷却
+                        }
+                    }
+                } finally {
+                    bitmap.recycle() // 确保即使在超时取消时，当前帧也被回收
                 }
-            } finally {
-                bitmap.recycle()
             }
+            // 如果 collect 正常结束（isDone = true），返回是否全部完成
+            index >= taskList.size
         }
-        return true
+
+        val finalResult = success ?: false
+        if (!finalResult) {
+            Log.e(TAG, "序列点击失败或超时。当前点击: ${taskList[index].templateName}")
+        }
+        return finalResult
     }
 
     /**
