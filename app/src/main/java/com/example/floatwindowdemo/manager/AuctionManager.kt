@@ -38,6 +38,7 @@ class AuctionManager(private val context: Context) {
     val targetPrice = config.maxPrice  //设置的目标单价
     val targetQty = config.maxQuantity //设置的目标数量
     val isGreedy = config.isGreedy //是否贪心
+    val xianZhiPrice = 100 //商品最低价，用于过滤低于该价格的商品
     private val miaoCode = ConfigManager.getMiaoCode(context) //喵提醒码
     /**
      * 核心逻辑入口：处理每一帧
@@ -118,25 +119,26 @@ class AuctionManager(private val context: Context) {
             // 是否需要购买
             val isPriceOk = targetPrice == 0L || price <= targetPrice
             val isQtyOk = targetQty == 0L || purchasedQty <= targetQty
-            if (isPriceOk && isQtyOk) {
+            if (price >= xianZhiPrice && isPriceOk && isQtyOk) {
+                doPurchase(price, quantity)
 
                 // 当总购买价格超过1w泰拉时考虑二次确认价格
-                if(price * quantity >= 10000L){
-                    val newBitmap = ScreenCaptureManager.frameFlow.first()
-                    val newPriceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, newBitmap)
-                    val newRawText = withContext(Dispatchers.Default) {
-                        OcrManager.recognizeTextAsync(newPriceBitmap)
-                    }
-                    newPriceBitmap.recycle()
-                    newBitmap.recycle()
-                    lastPrice = extractPrice(newRawText)
-                    // 价格稳定，且出现两帧之后才确定
-                    if (price != lastPrice) {
-                        Log.e(TAG,"价格不一致，首次: $price, 第二次: $lastPrice")
-                        // 此时以第二次识别价格为准并重新判断
-                        if (targetQty == 0L || lastPrice <= targetPrice) doPurchase(lastPrice, quantity)
-                    }else doPurchase(price, quantity)
-                } else doPurchase(price, quantity)
+//                if(price * quantity >= 10000L){
+//                    val newBitmap = ScreenCaptureManager.frameFlow.first()
+//                    val newPriceBitmap = cropBitmap(Auction.Regions.MIN_PRICE, newBitmap)
+//                    val newRawText = withContext(Dispatchers.Default) {
+//                        OcrManager.recognizeTextAsync(newPriceBitmap)
+//                    }
+//                    newPriceBitmap.recycle()
+//                    newBitmap.recycle()
+//                    lastPrice = extractPrice(newRawText)
+//                    // 价格稳定，且出现两帧之后才确定
+//                    if (price != lastPrice) {
+//                        Log.e(TAG,"价格不一致，首次: $price, 第二次: $lastPrice")
+//                        // 此时以第二次识别价格为准并重新判断
+//                        if (targetQty == 0L || lastPrice <= targetPrice) doPurchase(lastPrice, quantity)
+//                    }else doPurchase(price, quantity)
+//                } else doPurchase(price, quantity)
             }
         }
 
