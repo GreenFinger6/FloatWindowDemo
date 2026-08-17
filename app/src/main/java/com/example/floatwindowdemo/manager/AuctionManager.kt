@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -58,7 +59,7 @@ class AuctionManager(private val context: Context) {
                 // 尝试返回
                 AutomationService.instance?.click(Auction.Buttons.Back)
                 // 等待界面弹出
-                delay(UI_CD)
+                delay(UI_CD.milliseconds)
             }
         }
 
@@ -90,8 +91,8 @@ class AuctionManager(private val context: Context) {
     private suspend fun handleListState() {
         // 点击商品
         AutomationService.instance?.click(Auction.Buttons.Detail)
-        // 等待界面弹出
-        delay(UI_CD)
+        // 等待界面真正跳转到详情页，实现逻辑与物理的串行化
+        SequenceClicker.waitForImage(Auction.TPL_DETAIL, 0,10)
     }
 
     private suspend fun handleDetailState(bitmap: Bitmap) {
@@ -119,32 +120,36 @@ class AuctionManager(private val context: Context) {
             val isPriceOk = targetPrice == 0L || price <= targetPrice
             val isQtyOk = targetQty == 0L || purchasedQty <= targetQty
             if (isPriceOk && isQtyOk) {
-                doPurchase(price, quantity)
-
                 // 当总购买价格超过1w泰拉时考虑二次确认价格
-                if(price * quantity >= 10000L){
+                if(price * quantity >= 1L){
                     val newBitmap = ScreenCaptureManager.frameFlow.first()
                     val newPriceBitmap = cropBitmap(Auction.Regions.MIN_PRICE_CONFIRM, newBitmap)
                     val newRawText = withContext(Dispatchers.Default) {
                         OcrManager.recognizeTextAsync(newPriceBitmap)
                     }
-                    newPriceBitmap.recycle()
-                    newBitmap.recycle()
+
                     lastPrice = extractPrice(newRawText)
+                    Log.d(TAG,"二次确认价格: $price")
+
                     // 价格稳定，且出现两帧之后才确定
                     if (price != lastPrice) {
                         Log.e(TAG,"价格不一致，首次: $price, 第二次: $lastPrice")
+                        OpencvUtil.saveDebugBitmap(context, newBitmap)
                         // 此时以第二次识别价格为准并重新判断
                         if (targetQty == 0L || lastPrice <= targetPrice) doPurchase(lastPrice, quantity)
-                    }else doPurchase(price, quantity)
+                    }
+                    else doPurchase(price, quantity)
+
+                    newPriceBitmap.recycle()
+                    newBitmap.recycle()
                 } else doPurchase(price, quantity)
             }
         }
 
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)
-        // 等待界面弹出
-        delay(UI_CD)
+        // 等待界面真正跳回列表页
+        SequenceClicker.waitForImage(Auction.TPL_PURCHASE, 0,10)
     }
 
     private suspend fun doPurchase(price: Long, qty: Long) {
@@ -224,6 +229,6 @@ class AuctionManager(private val context: Context) {
 
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)
-        delay(UI_CD)
+        delay(UI_CD.milliseconds)
     }
 }

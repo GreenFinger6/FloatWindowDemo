@@ -161,5 +161,5 @@ suspend fun postMiao(id: String, text: String): Boolean{
         put("text", text)
     }
     // 异步发送
-    return NetworkUtil.sendPost("https://miaotixing.com/trigger", params)
+    return NetworkUtil.sendPost("https://miaotixing.com/log", params)
 }

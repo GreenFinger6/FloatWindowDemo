@@ -183,40 +183,39 @@ object SequenceClicker {
     }
 
     /**
-     * 等待图像出现的方法
+     * 等待图像出现的方法 (Reactive 模式)
      * @param templateName 模板名称
-     * @param timeoutMillis 最大等待时间
-     * @param checkInterval 检查间隔
+     * @param timeoutMillis 最大等待时间，为 0 代表无限等待
+     * @param checkInterval 检查间隔，减少 CPU 占用
      */
     suspend fun waitForImage(
         templateName: String,
-        timeoutMillis: Long = 0, // 最多等待时间，为0代表无限等待
-        checkInterval: Long = 500L    // 每隔0.5秒查一次
+        timeoutMillis: Long = 0,
+        checkInterval: Long = 200L
     ): Boolean {
-        // 定义核心循环逻辑
-        val checkLoop: suspend () -> Boolean = {
-            var found = false
-            while (!found) {
-                val frame = ScreenCaptureManager.frameFlow.first()
+        var found = false
+        val job: suspend () -> Unit = {
+            ScreenCaptureManager.frameFlow.takeWhile { !found }.collect { bitmap ->
                 try {
-                    val loc = withContext(Dispatchers.Default) {
-                        OpencvUtil.findInFrame(frame, templateName)
+                    val loc = OpencvUtil.findInFrame(bitmap, templateName)
+                    if (loc != null) {
+                        found = true
                     }
-                    if (loc != null) found = true
                 } finally {
-                    frame.recycle()
+                    bitmap.recycle()
                 }
-                if (!found) delay(checkInterval)
+                if (!found && checkInterval > 0) delay(checkInterval.milliseconds)
             }
-            true
         }
 
-        // 根据 timeoutMillis 决定是否使用超时限制
         return if (timeoutMillis > 0) {
-            withTimeoutOrNull(timeoutMillis) { checkLoop() } ?: false
+            withTimeoutOrNull(timeoutMillis.milliseconds) {
+                job()
+                found
+            } ?: false
         } else {
-            // timeoutMillis 为 0，无限等待
-            checkLoop()
+            job()
+            found
         }
     }
 }
