@@ -70,7 +70,7 @@ data class AuctionConfig(
 // 角色配置设置
 data class RoleData(
     val isEnabled: Boolean, // 是否启用
-    val daily: Boolean,
+    val dailyTask: String,   // 日常任务类型：深渊秘境、老深渊
     val boss: Boolean,
     val decompose: Boolean,
     val mail: Boolean

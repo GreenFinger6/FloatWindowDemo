@@ -3,104 +3,90 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="4dp"
-    android:layout_marginBottom="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
-    app:strokeColor="#DDDDDD"
+    android:layout_marginTop="1dp"
+    android:layout_marginBottom="1dp"
+    app:cardCornerRadius="2dp"
+    app:cardElevation="0.5dp"
+    app:strokeColor="#EEEEEE"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="8dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="2dp">
 
-        <!-- 标题栏：开关 + 名称-->
-        <RelativeLayout
-            android:id="@+id/layout_header"
-            android:layout_width="match_parent"
-            android:layout_height="35dp"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp">
-
-            <!-- 1. 换成通用的 SwitchCompat -->
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_role_enable"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:checked="true"
-                android:clickable="true"
-                android:focusable="true"
-                android:minWidth="48dp"
-                android:minHeight="48dp"
-                android:text="" />
-
-            <!-- 2. 名字：放在开关右边 -->
-            <TextView
-                android:id="@+id/tv_role_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="8dp"
-                android:layout_toEndOf="@id/switch_role_enable"
-                android:text="角色 1"
-                android:textColor="@color/purple_500"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
-
-        <LinearLayout
-            android:id="@+id/layout_tasks_content"
-            android:layout_width="match_parent"
+        <!-- 1. 角色开启勾选：承载“角色 X”文本，分配较多权重以保证文字不换行 -->
+        <CheckBox
+            android:id="@+id/switch_role_enable"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"> <!-- 默认折叠 -->
+            android:layout_weight="1.2"
+            android:checked="true"
+            android:text="角色 1"
+            android:textStyle="bold"
+            android:textColor="@color/purple_500"
+            android:textSize="11sp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:minWidth="0dp"
+            android:minHeight="32dp" />
 
-            <com.google.android.material.divider.MaterialDivider
+        <!-- 2. 日常任务下拉框：权重与 CheckBox 平衡 -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.5"
+            android:hint="任务"
+            app:hintEnabled="true"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="1dp">
+
+            <AutoCompleteTextView
+                android:id="@+id/spinner_daily_task"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="4dp" />
+                android:inputType="none"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:textSize="11sp" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <GridLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:columnCount="4"
-                android:padding="8dp">
+        <!-- 3. 其他功能勾选：平均分配剩余空间 -->
+        <CheckBox
+            android:id="@+id/cb_boss"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:text="神秘商店"
+            android:textSize="11sp"
+            android:paddingStart="2dp"
+            android:paddingEnd="0dp"
+            android:minHeight="32dp" />
 
-                <CheckBox
-                    android:id="@+id/cb_daily"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="日常副本"
-                    android:textSize="12sp" />
+        <CheckBox
+            android:id="@+id/cb_decompose"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:text="分解装备"
+            android:textSize="11sp"
+            android:paddingStart="2dp"
+            android:paddingEnd="0dp"
+            android:minHeight="32dp" />
 
-                <CheckBox
-                    android:id="@+id/cb_boss"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="自动BOSS"
-                    android:textSize="12sp" />
+        <CheckBox
+            android:id="@+id/cb_mail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:text="领取邮件"
+            android:textSize="11sp"
+            android:paddingStart="2dp"
+            android:paddingEnd="0dp"
+            android:minHeight="32dp" />
 
-                <CheckBox
-                    android:id="@+id/cb_decompose"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="分解装备"
-                    android:textSize="12sp" />
-
-                <CheckBox
-                    android:id="@+id/cb_mail"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="领取邮件"
-                    android:textSize="12sp" />
-            </GridLayout>
-        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

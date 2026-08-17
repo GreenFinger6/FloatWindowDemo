@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.example.floatwindowdemo.R
 import com.example.floatwindowdemo.databinding.FragmentGeneralSettingsBinding
 import com.example.floatwindowdemo.databinding.ItemRoleConfigBinding
 import com.example.floatwindowdemo.utils.AuctionConfig
@@ -20,7 +19,6 @@ class GeneralSettingsFragment : Fragment() {
     private var _binding: FragmentGeneralSettingsBinding? = null
     private val binding get() = _binding!!
 
-    private var expandedView: View? = null // 当前展开的view，用于手风琴效果
     private val settingGroups by lazy {
         listOf(
             binding.groupAuctionSettings,   // Index 0，拍卖行
@@ -129,7 +127,6 @@ class GeneralSettingsFragment : Fragment() {
     private fun generateRoleList(count: Int) {
         val container = binding.containerRoles
         container.removeAllViews() // 清空旧的
-        expandedView = null        // 重置展开项
 
         for (i in 1..count) {
             addRoleItem(i)
@@ -143,34 +140,29 @@ class GeneralSettingsFragment : Fragment() {
         val container = binding.containerRoles
         val itemBinding = ItemRoleConfigBinding.inflate(layoutInflater, container, false)
 
-        // 1. 初始化显示
-        itemBinding.tvRoleName.text = "角色 $index"
-        // 默认收起详情
-        itemBinding.layoutTasksContent.visibility = View.GONE
+        // 1. 初始化显示：将角色名设置给勾选框
+        itemBinding.switchRoleEnable.text = "角色 $index"
 
-        // 2. 点击标题栏切换展开/收起 (手风琴效果)
-        itemBinding.layoutHeader.setOnClickListener {
-            val isExpanding = itemBinding.layoutTasksContent.visibility == View.GONE
+        // 2. 初始化下拉框选项
+        val tasks = arrayOf("深渊秘境", "老深渊")
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, tasks)
+        itemBinding.spinnerDailyTask.setAdapter(adapter)
+        // 默认选中第一个
+        itemBinding.spinnerDailyTask.setText(tasks[0], false)
+        
+        // 默认勾选其他功能
+        itemBinding.cbBoss.isChecked = true
+        itemBinding.cbDecompose.isChecked = true
+        itemBinding.cbMail.isChecked = true
 
-            // 使用 TransitionManager 增加丝滑动画
-            androidx.transition.TransitionManager.beginDelayedTransition(container)
-
-            if (isExpanding) {
-                // 收起之前展开的
-                expandedView?.findViewById<View>(R.id.layout_tasks_content)?.visibility = View.GONE
-                // 展开当前的
-                itemBinding.layoutTasksContent.visibility = View.VISIBLE
-                expandedView = itemBinding.root
-            } else {
-                // 点击已展开的项则收起
-                itemBinding.layoutTasksContent.visibility = View.GONE
-                expandedView = null
-            }
-        }
-
-        // 3. 原有的开关逻辑 (控制是否启用，不影响手动展开/收起)
+        // 3. 开关逻辑 (控制是否启用)
         itemBinding.switchRoleEnable.setOnCheckedChangeListener { _, isChecked ->
-            itemBinding.tvRoleName.alpha = if (isChecked) 1.0f else 0.5f
+            itemBinding.switchRoleEnable.alpha = if (isChecked) 1.0f else 0.5f
+            // 灰掉所有功能控件表示禁用
+            itemBinding.spinnerDailyTask.isEnabled = isChecked
+            itemBinding.cbBoss.isEnabled = isChecked
+            itemBinding.cbDecompose.isEnabled = isChecked
+            itemBinding.cbMail.isEnabled = isChecked
         }
 
         container.addView(itemBinding.root)
@@ -198,13 +190,18 @@ class GeneralSettingsFragment : Fragment() {
 
             // 还原各控件状态
             itemBinding.switchRoleEnable.isChecked = data.isEnabled
-            itemBinding.cbDaily.isChecked = data.daily
+            itemBinding.switchRoleEnable.text = "角色 ${i + 1}"
+            itemBinding.spinnerDailyTask.setText(data.dailyTask, false)
             itemBinding.cbBoss.isChecked = data.boss
             itemBinding.cbDecompose.isChecked = data.decompose
             itemBinding.cbMail.isChecked = data.mail
 
-            // 还原视觉效果（因为初始化时 Listener 可能不会自动触发 alpha 变化）
-            itemBinding.tvRoleName.alpha = if (data.isEnabled) 1.0f else 0.5f
+            // 还原视觉效果并联动禁用状态
+            itemBinding.switchRoleEnable.alpha = if (data.isEnabled) 1.0f else 0.5f
+            itemBinding.spinnerDailyTask.isEnabled = data.isEnabled
+            itemBinding.cbBoss.isEnabled = data.isEnabled
+            itemBinding.cbDecompose.isEnabled = data.isEnabled
+            itemBinding.cbMail.isEnabled = data.isEnabled
         }
     }
 
@@ -221,7 +218,7 @@ class GeneralSettingsFragment : Fragment() {
             // 收集该行数据
             val data = RoleData(
                 isEnabled = itemBinding.switchRoleEnable.isChecked,
-                daily = itemBinding.cbDaily.isChecked,
+                dailyTask = itemBinding.spinnerDailyTask.text.toString(),
                 boss = itemBinding.cbBoss.isChecked,
                 decompose = itemBinding.cbDecompose.isChecked,
                 mail = itemBinding.cbMail.isChecked
