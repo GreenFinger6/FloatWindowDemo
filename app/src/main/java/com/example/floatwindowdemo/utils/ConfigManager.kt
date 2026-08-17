@@ -14,6 +14,12 @@ object ConfigManager {
     private const val KEY_MIAO_CODE = "miao_code" //喵提醒码
     private const val KEY_MAIN_TASK = "main_task" // 当前任务
     private const val KEY_ROLE_DATA = "role_data" // 存放 JSON 字符串
+    
+    // --- 定时启动配置 ---
+    private const val KEY_SCHEDULE_ENABLED = "schedule_enabled"
+    private const val KEY_SCHEDULE_HOUR = "schedule_hour"
+    private const val KEY_SCHEDULE_MINUTE = "schedule_minute"
+    private const val KEY_SCHEDULE_REPEAT = "schedule_repeat"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -57,6 +63,25 @@ object ConfigManager {
         val id = getPrefs(context).getString(KEY_MIAO_CODE, "")
         return id
     }
+
+    fun saveScheduleConfig(context: Context, config: ScheduleConfig) {
+        getPrefs(context).edit {
+            putBoolean(KEY_SCHEDULE_ENABLED, config.isEnabled)
+            putInt(KEY_SCHEDULE_HOUR, config.hour)
+            putInt(KEY_SCHEDULE_MINUTE, config.minute)
+            putBoolean(KEY_SCHEDULE_REPEAT, config.isRepeatDaily)
+        }
+    }
+
+    fun getScheduleConfig(context: Context): ScheduleConfig {
+        val prefs = getPrefs(context)
+        return ScheduleConfig(
+            isEnabled = prefs.getBoolean(KEY_SCHEDULE_ENABLED, false),
+            hour = prefs.getInt(KEY_SCHEDULE_HOUR, 8),
+            minute = prefs.getInt(KEY_SCHEDULE_MINUTE, 0),
+            isRepeatDaily = prefs.getBoolean(KEY_SCHEDULE_REPEAT, true)
+        )
+    }
 }
 
 // 拍卖行抢拍设置
@@ -74,4 +99,12 @@ data class RoleData(
     val boss: Boolean,
     val decompose: Boolean,
     val mail: Boolean
+)
+
+// 定时启动配置
+data class ScheduleConfig(
+    val isEnabled: Boolean,
+    val hour: Int,
+    val minute: Int,
+    val isRepeatDaily: Boolean
 )

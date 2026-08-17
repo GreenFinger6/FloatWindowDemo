@@ -11,10 +11,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.floatwindowdemo.databinding.FragmentOtherSettingsBinding
-import com.example.floatwindowdemo.utils.ConfigManager
-import com.example.floatwindowdemo.utils.NetworkUtil
-import com.example.floatwindowdemo.utils.installApk
-import com.example.floatwindowdemo.utils.postMiao
+import com.example.floatwindowdemo.utils.*
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -61,8 +58,35 @@ class OtherSettingsFragment : Fragment() {
         // 检查更新按钮绑定监听器
         initUpdateLogic()
 
+        // 定时启动逻辑
+        initScheduleLogic()
+
         // 初始化回显（从本地读取已保存的配置）
         loadSettings()
+    }
+
+    private var selectedHour = 8
+    private var selectedMinute = 0
+
+    private fun initScheduleLogic() {
+        binding.layoutScheduleTime.setOnClickListener {
+            val timePicker = android.app.TimePickerDialog(
+                requireContext(),
+                { _, hourOfDay, minute ->
+                    selectedHour = hourOfDay
+                    selectedMinute = minute
+                    updateTimeDisplay()
+                },
+                selectedHour,
+                selectedMinute,
+                true
+            )
+            timePicker.show()
+        }
+    }
+
+    private fun updateTimeDisplay() {
+        binding.tvScheduleTime.text = String.format("%02d:%02d", selectedHour, selectedMinute)
     }
 
     /**
@@ -75,6 +99,18 @@ class OtherSettingsFragment : Fragment() {
         // 喵提醒码
         val savedId = ConfigManager.getMiaoCode(requireContext())
         binding.editMiaoCode.setText(savedId)
+
+        // 定时启动配置
+        val scheduleConfig = ConfigManager.getScheduleConfig(requireContext())
+        binding.switchSchedule.isChecked = scheduleConfig.isEnabled
+        selectedHour = scheduleConfig.hour
+        selectedMinute = scheduleConfig.minute
+        updateTimeDisplay()
+        if (scheduleConfig.isRepeatDaily) {
+            binding.rbDaily.isChecked = true
+        } else {
+            binding.rbOnce.isChecked = true
+        }
     }
 
     /**
@@ -88,6 +124,11 @@ class OtherSettingsFragment : Fragment() {
         val miaoCode = binding.editMiaoCode.text.toString().trim()
         ConfigManager.saveMiaoCode(requireContext(), miaoCode)
 
+        // 定时启动配置
+        val isEnabled = binding.switchSchedule.isChecked
+        val isRepeatDaily = binding.rbDaily.isChecked
+        val config = ScheduleConfig(isEnabled, selectedHour, selectedMinute, isRepeatDaily)
+        ConfigManager.saveScheduleConfig(requireContext(), config)
     }
 
     override fun onDestroyView() {
