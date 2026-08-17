@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.floatwindowdemo.utils.Auction
+import com.example.floatwindowdemo.utils.ConfigManager
 import com.example.floatwindowdemo.utils.Dungeon
 import com.example.floatwindowdemo.utils.OpencvUtil
 import com.example.floatwindowdemo.utils.SequenceClicker
@@ -13,6 +14,7 @@ import com.example.floatwindowdemo.utils.YoloUtil
 import com.example.floatwindowdemo.utils.cropBitmap
 import com.example.floatwindowdemo.utils.extractStamina
 import kotlinx.coroutines.*
+import java.util.*
 
 class ScriptExecutor(
     private val context: Context,
@@ -21,6 +23,7 @@ class ScriptExecutor(
     private val TAG = "ScriptExecutor"
     // 协程作用域，绑定到主线程，才能更新UI
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private var monitorJob: Job? = null // 用于管理定时监控协程
     private val handler = Handler(Looper.getMainLooper())
 
 
@@ -29,6 +32,7 @@ class ScriptExecutor(
     var isPausedBySystem = false
     var isRunning = false // 开始状态标记
     var isPaused = false // 暂停状态标记
+    var isWaitingSchedule = false // 是否正在等待定时
 
 
     /**
@@ -86,6 +90,63 @@ class ScriptExecutor(
         }
     }
 
+    /**
+     * 启动定时监控协程
+     */
+    fun startScheduleMonitor() {
+        if (monitorJob != null) return
+        isRunning = true
+        isWaitingSchedule = true
+        monitorJob = scope.launch(Dispatchers.IO) {
+            Log.d(TAG, "定时监控协程已启动，等待目标时间")
+            while (isActive && isRunning && isWaitingSchedule) {
+                try {
+                    val config = ConfigManager.getScheduleConfig(context)
+                    if (config.isEnabled) {
+                        val now = Calendar.getInstance()
+                        val nowHour = now.get(Calendar.HOUR_OF_DAY)
+                        val nowMin = now.get(Calendar.MINUTE)
+
+                        if (nowHour == config.hour && nowMin == config.minute) {
+                            Log.i(TAG, "定时时间到达，自动准备启动脚本...")
+                            isWaitingSchedule = false
+
+                            // 切换到主线程触发业务
+                            withContext(Dispatchers.Main) {
+                                // 关键：先重置运行标记，否则 runStreamingTask 会因为检测到 isRunning==true 而直接 return
+                                isRunning = false
+
+                                val taskIndex = ConfigManager.getMainTask(context)
+                                when (taskIndex) {
+                                    0 -> startAuction()
+                                    1 -> startTask()
+                                    2 -> saveScreen()
+                                    else -> Log.w(TAG, "定时启动失败：未定义对应索引的任务")
+                                }
+                                onStatusUpdate("定时启动成功")
+                            }
+
+                            // 如果是“仅一次”模式，则关闭定时开关
+                            if (!config.isRepeatDaily) {
+                                ConfigManager.saveScheduleConfig(context, config.copy(isEnabled = false))
+                                Log.d(TAG, "已关闭“仅一次”定时开关")
+                            }
+                            break // 任务已启动，退出监控循环
+                        }
+                    } else {
+                        // 如果中途关闭了定时配置，则退出等待
+                        isWaitingSchedule = false
+                        isRunning = false
+                        break
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "定时监控异常: ${e.message}")
+                }
+                delay(10000L) // 每 10 秒精确检查一次
+            }
+            monitorJob = null
+        }
+    }
 
     /**
      * 执行一系列点击任务
@@ -197,10 +258,15 @@ class ScriptExecutor(
     fun stop() {
         isRunning = false
         isPaused = false
+        isWaitingSchedule = false
         ScreenCaptureManager.stopStreaming()
         handler.removeCallbacksAndMessages(null)
-        // 取消所有正在运行的协程任务
+        
+        // 取消所有正在运行的协程
+        monitorJob?.cancel()
+        monitorJob = null
         scope.coroutineContext.cancelChildren()
+        
         YoloUtil.release() // 脚本停止时清理 C++ 层模型缓存
         OpencvUtil.releaseTemplates() // 释放模版缓存
     }

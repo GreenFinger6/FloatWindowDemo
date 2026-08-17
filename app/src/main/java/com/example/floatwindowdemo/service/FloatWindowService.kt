@@ -180,42 +180,30 @@ class FloatWindowService : Service() {
         // 悬浮球菜单点击
         binding.btnStartScript.setOnClickListener {
             if (!scriptExecutor.isRunning) {
-                // 状态：还没运行 -> 点击开始
-                showCustomToast("▶️ 脚本启动")
-                // 从本地存储读取当前选中的任务索引
-                val taskIndex = ConfigManager.getMainTask(this)
-                when (taskIndex) {
-                    0 -> scriptExecutor.startAuction() // 拍卖行抢拍
-                    1 -> scriptExecutor.startTask() // 调用多角色任务方法
-                    2 -> scriptExecutor.saveScreen()
-                    // scriptExecutor.test()
-                    // scriptExecutor.saveScreen()
-                    // scriptExecutor.execute()
-                    //scriptExecutor.showAllText()
-                }
-
-                // 开启过渡动画
-                androidx.transition.TransitionManager.beginDelayedTransition(
-                    binding.root as android.view.ViewGroup,
-                    androidx.transition.AutoTransition().setDuration(300)
-                )
-
-                // 隐藏面板
-                binding.llControlPanel.visibility = View.GONE
-
-                // 告诉 WindowManager 宽度已缩小
-                windowManager.updateViewLayout(binding.root, layoutParams)
-
-                // 执行贴边逻辑（贴边方法内部会自动触发 3 秒半隐藏倒计时）
-                snapToEdge()
-
-            } else {
-                // 状态 2：正在运行 -> 点击切换 暂停/恢复
-                scriptExecutor.togglePause()
-                if (scriptExecutor.isPaused) {
-                    showCustomToast("⏸️ 脚本已暂停")
+                // 1. 检查定时配置
+                val scheduleConfig = ConfigManager.getScheduleConfig(this)
+                if (scheduleConfig.isEnabled) {
+                    showCustomToast("⏰ 已进入定时等待模式")
+                    scriptExecutor.startScheduleMonitor()
                 } else {
-                    showCustomToast("▶️ 脚本已恢复")
+                    // 状态：还没运行且未开定时 -> 立即点击开始
+                    showCustomToast("▶️ 脚本启动")
+                    startScriptLogic()
+                }
+            } else {
+                if (scriptExecutor.isWaitingSchedule) {
+                    // 如果正在等待定时，点击则直接取消并立即开始
+                    showCustomToast("⏩ 取消等待，立即开始")
+                    scriptExecutor.stop() // 先停止监控
+                    startScriptLogic()
+                } else {
+                    // 状态 2：正在运行 -> 点击切换 暂停/恢复
+                    scriptExecutor.togglePause()
+                    if (scriptExecutor.isPaused) {
+                        showCustomToast("⏸️ 脚本已暂停")
+                    } else {
+                        showCustomToast("▶️ 脚本已恢复")
+                    }
                 }
             }
             updateUI()
@@ -264,26 +252,51 @@ class FloatWindowService : Service() {
         }
     }
 
+    /**
+     * 封装通用的启动逻辑，包含 UI 动效和面板收起
+     */
+    private fun startScriptLogic() {
+        val taskIndex = ConfigManager.getMainTask(this)
+        when (taskIndex) {
+            0 -> scriptExecutor.startAuction() // 拍卖行抢拍
+            1 -> scriptExecutor.startTask()    // 调用多角色任务方法
+            2 -> scriptExecutor.saveScreen()
+        }
+
+        // 开启过渡动画并隐藏面板
+        androidx.transition.TransitionManager.beginDelayedTransition(
+            binding.root as android.view.ViewGroup,
+            androidx.transition.AutoTransition().setDuration(300)
+        )
+        binding.llControlPanel.visibility = View.GONE
+        windowManager.updateViewLayout(binding.root, layoutParams)
+        snapToEdge()
+    }
+
     // 更新UI显示
-    private fun updateUI(){
+    private fun updateUI() {
         if (!scriptExecutor.isRunning) {
             // 状态: 等待开始
             binding.btnStartScript.text = "开始"
-            val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_play)
-            binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
+            val icon = ContextCompat.getDrawable(this, R.drawable.ic_play)
+            binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null)
         } else {
-            if (scriptExecutor.isPaused){
+            if (scriptExecutor.isWaitingSchedule) {
+                // 正在等待定时触发
+                binding.btnStartScript.text = "等待中"
+                val icon = ContextCompat.getDrawable(this, R.drawable.ic_pause) // 使用暂停图标表示等待
+                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null)
+            } else if (scriptExecutor.isPaused) {
                 // 等待恢复
                 binding.btnStartScript.text = "恢复"
-                val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_pause)
-                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
-            }else{
+                val icon = ContextCompat.getDrawable(this, R.drawable.ic_play)
+                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null)
+            } else {
                 // 正在运行
                 binding.btnStartScript.text = "暂停"
-                val pauseIcon = ContextCompat.getDrawable(this, R.drawable.ic_resume)
-                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, pauseIcon, null, null)
+                val icon = ContextCompat.getDrawable(this, R.drawable.ic_pause)
+                binding.btnStartScript.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null)
             }
-
         }
     }
 
