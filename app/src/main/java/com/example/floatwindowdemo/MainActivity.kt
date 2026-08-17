@@ -186,8 +186,8 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_FLOAT_WINDOW_PERMISSION) {
             if (checkFloatWindowPermission()) {
-                // 悬浮窗权限刚拿到了，立即进入下一步：申请屏幕权限
-                requestScreenCapturePermission()
+                // 悬浮窗权限刚拿到了，回到主流程继续检查
+                handleStartFlow()
             } else {
                 Toast.makeText(this, "未获得悬浮窗权限，无法开启", Toast.LENGTH_SHORT).show()
             }
