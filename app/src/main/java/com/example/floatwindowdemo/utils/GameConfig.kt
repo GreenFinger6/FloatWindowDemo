@@ -20,9 +20,10 @@ object Auction {
     object Regions {
         // 成功购买数量区域
         val SUCCESS_BUY = RectArea(0.4268f, 0.6f, 0.6621f, 0.6556f)
-
         // 拍卖行最低价区域
         val MIN_PRICE = RectArea(0.1148f, 0.4194f, 0.4770f, 0.5083f)
+        // 拍卖行最低价二次确认区域
+        val MIN_PRICE_CONFIRM = RectArea(0.6895f, 0.5944f, 0.8326f, 0.6430f)
 
         // 按钮快速匹配区域 (ROI)
         val BUY_BTN = RectArea(0.505f, 0.6264f, 0.8833f, 0.9217f)
