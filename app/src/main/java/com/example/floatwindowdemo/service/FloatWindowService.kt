@@ -31,8 +31,6 @@ class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
     private lateinit var layoutParams: WindowManager.LayoutParams
-    // 屏幕获取
-    private lateinit var screenCaptureManager: ScreenCaptureManager
     // 任务执行
     private lateinit var scriptExecutor: ScriptExecutor
 
@@ -470,9 +468,7 @@ class FloatWindowService : Service() {
         ballHandler.removeCallbacksAndMessages(null)
 
         // 释放屏幕采集会话，防止内存泄漏和通知栏残留
-        if (::screenCaptureManager.isInitialized) {
-            screenCaptureManager.stop()
-        }
+        ScreenCaptureManager.stop()
 
         // 停止前台通知（适配 API 33+）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -481,11 +477,6 @@ class FloatWindowService : Service() {
             @Suppress("DEPRECATION")
             stopForeground(true)
         }
-
-        // 彻底杀掉进程（延迟 300ms 以确保 UI 清理完毕）
-        toastHandler.postDelayed({
-            android.os.Process.killProcess(android.os.Process.myPid())
-        }, 300)
     }
 
     override fun onBind(intent: Intent?): IBinder? {
