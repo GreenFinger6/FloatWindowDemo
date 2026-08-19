@@ -23,7 +23,7 @@ enum class GameState {
     RECOVERY    // 异常恢复：处理弹窗或卡死
 }
 
-class GameManager(private val context: Context) {
+class GameManager(context: Context) {
     private val TAG = "GameManager"
     private var isTown = true // 是否在城镇
     private val UI_CD = 500L    // UI延迟，ms
@@ -69,7 +69,7 @@ class GameManager(private val context: Context) {
                     backSelectHero()
 
                     // 喵提醒
-                    if (miaoCode != null) postMiao(miaoCode, "角色${countHero+1}任务完成")
+                    if (miaoCode != null) postMiao(miaoCode, "角色${countHero+1}：${roleList[countHero].dailyTask} 任务完成")
 
                     // 切换状态
                     isTown = true
@@ -85,8 +85,8 @@ class GameManager(private val context: Context) {
                         // 处理可能出现的公告
                         closeAd()
 
-                        // 进入深渊
-                        SequenceClicker.runSequence(Dungeon.entryPastDungeon)
+                        // 根据任务选择进入深渊
+                        SequenceClicker.runSequence(Dungeon.dungeonStepMap.getOrDefault(roleList[countHero].dailyTask, Dungeon.entryPastDungeon))
 
                         // 更新是否在城镇
                         isTown = false

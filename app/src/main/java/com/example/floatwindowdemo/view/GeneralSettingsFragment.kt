@@ -144,7 +144,7 @@ class GeneralSettingsFragment : Fragment() {
         itemBinding.switchRoleEnable.text = "角色 $index"
 
         // 2. 初始化下拉框选项
-        val tasks = arrayOf("深渊秘境", "老深渊")
+        val tasks = arrayOf("老深渊", "深渊秘境")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, tasks)
         itemBinding.spinnerDailyTask.setAdapter(adapter)
         // 默认选中第一个

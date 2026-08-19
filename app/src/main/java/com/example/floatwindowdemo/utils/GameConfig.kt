@@ -192,6 +192,12 @@ object Dungeon {
         TPL_ENTRY_GATE
     )
 
+    // key:副本名称，value:步骤List
+    val dungeonStepMap: Map<String, List<String>> = mapOf(
+        "深渊秘境" to entrySequence,
+        "老深渊" to entryPastDungeon
+    )
+
     // 背包分解
     val decomposeBag = listOf(
         TPL_BAG,
