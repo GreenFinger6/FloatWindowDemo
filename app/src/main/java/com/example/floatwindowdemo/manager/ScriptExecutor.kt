@@ -126,11 +126,8 @@ class ScriptExecutor(
                                 onStatusUpdate("定时启动成功")
                             }
 
-                            // 如果是“仅一次”模式，则关闭定时开关
-                            if (!config.isRepeatDaily) {
-                                ConfigManager.saveScheduleConfig(context, config.copy(isEnabled = false))
-                                Log.d(TAG, "已关闭“仅一次”定时开关")
-                            }
+                            // 如果是“仅一次”模式，则直接结束监控任务
+                            // if (!config.isRepeatDaily) {}
                             break // 任务已启动，退出监控循环
                         }
                     } else {
