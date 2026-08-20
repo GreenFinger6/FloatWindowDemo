@@ -114,11 +114,12 @@ object Dungeon {
         // 城镇体力识别区域
         val TOWN_STAMINA = RectArea(0.1213f, 0.0764f, 0.1770f, 0.125f)
         // 战斗体力识别区域
-        val BATTLE_STAMINA = RectArea(0.1277f, 0.0708f,  0.2021f, 0.1292f)
+        val BATTLE_STAMINA = RectArea(0.1083f, 0.7778f,  0.2263f, 0.1231f)
     }
 
 
     // 状态检测类模板
+    const val TPL_PICK_UP = "state_game_pickup" // 拾取物品
     const val TPL_RE_CHALLENGE = "button_re_challenge" // 再次挑战
     const val TPL_BACK_2_TOWN = "button_back2town"     // 返回城镇
     const val TPL_REPAIR_EQUIP = "button_repairEquip"     // 修理装备
@@ -147,6 +148,7 @@ object Dungeon {
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
+        TPL_PICK_UP,
         TPL_RE_CHALLENGE,
         TPL_BACK_2_TOWN,
         TPL_REPAIR_EQUIP,

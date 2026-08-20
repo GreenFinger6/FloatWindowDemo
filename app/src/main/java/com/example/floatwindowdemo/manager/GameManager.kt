@@ -116,10 +116,9 @@ class GameManager(private val context: Context) {
         // 使用 try-finally 确保裁剪的 Bitmap 无论如何都会被回收
         val roi = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
         val currentHasPickUp = try {
-            val text = withContext(Dispatchers.Default) {
-                OcrManager.recognizeTextAsync(roi)
+             withContext(Dispatchers.Default) {
+                 OpencvUtil.findInFrame(roi, Dungeon.TPL_RE_CHALLENGE)
             }
-            text.contains("道具")
         } finally {
             roi.recycle() // 必须回收！防止 Native 内存溢出
         }
@@ -128,7 +127,7 @@ class GameManager(private val context: Context) {
             // 业务决策逻辑 (分支流转)
             when {
                 // 优先级 : 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
-                !currentHasPickUp -> {
+                currentHasPickUp == null -> {
 
                     // 1. 并行启动三个识别任务
                     val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
