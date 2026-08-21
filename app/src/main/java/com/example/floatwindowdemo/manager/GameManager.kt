@@ -117,7 +117,7 @@ class GameManager(context: Context) {
         val roi = cropBitmap(Dungeon.Regions.BATTLE_STAMINA, bitmap)
         val currentHasPickUp = try {
              withContext(Dispatchers.Default) {
-                 OpencvUtil.findInFrame(roi, Dungeon.TPL_RE_CHALLENGE)
+                 OpencvUtil.findInFrame(roi, Dungeon.TPL_PICK_UP)
             }
         } finally {
             roi.recycle() // 必须回收！防止 Native 内存溢出
