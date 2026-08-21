@@ -114,7 +114,7 @@ object Dungeon {
         // 城镇体力识别区域
         val TOWN_STAMINA = RectArea(0.1213f, 0.0764f, 0.1770f, 0.125f)
         // 战斗体力识别区域
-        val BATTLE_STAMINA = RectArea(0.1083f, 0.7778f,  0.2263f, 0.1231f)
+        val BATTLE_STAMINA = RectArea(0.1083f, 0.07778f,  0.2263f, 0.1375f)
     }
 
 
