@@ -157,7 +157,10 @@ class GameManager(context: Context) {
                         backLoc != null -> {
                             Log.i(TAG, "点击：返回城镇")
                             AutomationService.instance?.click(backLoc)
-                            true // 告知 Service 任务切换回城镇模式
+
+                            // 此时有可能还有物品没拾取完
+                            if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
+                            else true // 告知 Service 任务切换回城镇模式
                         }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
