@@ -99,7 +99,7 @@ object Auction {
 object Dungeon {
     object Buttons {
         val Attack = Pair(0.8618f, 0.8847f) // 攻击
-        val Settings = Pair(0.9466f, 0.1819f) // 设置
+        val Right = Pair(0.25f, 0.75f) // 向右移动
 
         // 角色选择界面，每个角色的坐标
         val SelectHeroList = listOf(

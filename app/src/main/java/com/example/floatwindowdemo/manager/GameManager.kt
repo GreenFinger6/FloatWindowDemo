@@ -7,6 +7,7 @@ import com.example.floatwindowdemo.service.AutomationService
 import com.example.floatwindowdemo.utils.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -157,13 +158,14 @@ class GameManager(context: Context) {
                         backLoc != null -> {
                             Log.i(TAG, "点击：返回城镇")
                             AutomationService.instance?.click(backLoc)
-
+                            delay(UI_CD*4)      // 点击后稍微缓冲
                             // 此时有可能还有物品没拾取完
                             if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
                             else true // 告知 Service 任务切换回城镇模式
                         }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
+                            AutomationService.instance?.click(Dungeon.Buttons.Right, 50L)
                             AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
                             false
                         }
@@ -173,6 +175,7 @@ class GameManager(context: Context) {
                 // 优先级 : 正常战斗/寻路阶段
                 else -> {
                     // 调用挂起式长按，此时协程会挂起 2s，collect 会自动跳过期间的帧
+                    AutomationService.instance?.click(Dungeon.Buttons.Right, 50L)
                     AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
                     false
                 }
