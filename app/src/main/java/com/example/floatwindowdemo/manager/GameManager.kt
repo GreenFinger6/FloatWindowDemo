@@ -58,6 +58,7 @@ class GameManager(context: Context) {
                     Log.i(TAG,"角色${countHero+1}战斗结束")
 
                     // 神秘商店
+                    // TODO: 此时如果有人邀请导致未成功返回主界面会卡死 
                     secretShop()
 
                     // 分解装备
