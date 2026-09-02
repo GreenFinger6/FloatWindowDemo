@@ -92,7 +92,7 @@ static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vecto
 // --- JNI 接口实现 ---
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_floatwindowdemo_utils_YoloUtil_initModel(JNIEnv *env, jobject thiz, jobject assetManager) {
+Java_com_xiaofang_floatwindow_utils_YoloUtil_initModel(JNIEnv *env, jobject thiz, jobject assetManager) {
     // 强制设置大核
     ncnn::set_cpu_powersave(2); // 0=all, 1=little, 2=big
     ncnn::Option opt;
@@ -109,7 +109,7 @@ Java_com_example_floatwindowdemo_utils_YoloUtil_initModel(JNIEnv *env, jobject t
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_example_floatwindowdemo_utils_YoloUtil_detect(JNIEnv *env, jobject thiz, jobject bitmap,
+Java_com_xiaofang_floatwindow_utils_YoloUtil_detect(JNIEnv *env, jobject thiz, jobject bitmap,
                                                        jfloat prob_threshold, jfloat nms_threshold) {
     AndroidBitmapInfo info;
     void* pixels;
@@ -216,7 +216,7 @@ Java_com_example_floatwindowdemo_utils_YoloUtil_detect(JNIEnv *env, jobject thiz
     nms_sorted_bboxes(proposals, picked, nms_threshold);
 
     // 5. 封装返回 Java 结果
-    jclass resClass = env->FindClass("com/example/floatwindowdemo/utils/DetectionResult");
+    jclass resClass = env->FindClass("com/xiaofang/floatwindow/utils/DetectionResult");
     jmethodID resConstructor = env->GetMethodID(resClass, "<init>", "(FFFFIF)V");
     jobjectArray ret = env->NewObjectArray(picked.size(), resClass, nullptr);
 
@@ -234,7 +234,7 @@ Java_com_example_floatwindowdemo_utils_YoloUtil_detect(JNIEnv *env, jobject thiz
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_floatwindowdemo_utils_YoloUtil_release(JNIEnv *env, jobject thiz) {
+Java_com_xiaofang_floatwindow_utils_YoloUtil_release(JNIEnv *env, jobject thiz) {
     yolov8.clear(); // 清空网络层数据
     blob_pool_allocator.clear();
     workspace_pool_allocator.clear();

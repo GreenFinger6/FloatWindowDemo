@@ -6,7 +6,7 @@
     android:orientation="horizontal"> <!-- 保持水平，确保面板在球右侧 -->
 
     <!-- 悬浮球 -->
-    <com.example.floatwindowdemo.view.DraggableFloatBall
+    <com.xiaofang.floatwindow.view.DraggableFloatBall
         android:id="@+id/iv_float_ball"
         android:layout_width="@dimen/float_size"
         android:layout_height="@dimen/float_size"

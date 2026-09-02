@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.floatwindowdemo"
+    namespace = "com.xiaofang.floatwindow"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.floatwindowdemo"
+        applicationId = "com.xiaofang.floatwindow"
         minSdk = 26
         targetSdk = 36
         versionCode = 1     // 整数，系统用来判断谁的版本更高
