@@ -2,6 +2,7 @@
 <!-- 1. 最外层必须是一个 ScrollView，这样内容多了才能滚 -->
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -181,6 +182,7 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/edit_role_count"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
@@ -194,6 +196,15 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="生成列表" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_sync_config"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="同步配置"
+                    app:tooltipText="将角色1的配置同步给所有角色" />
             </LinearLayout>
 
             <!-- 动态容器 -->

@@ -60,6 +60,11 @@ class GeneralSettingsFragment : Fragment() {
             }
         }
 
+        // 绑定同步配置按钮
+        binding.btnSyncConfig.setOnClickListener {
+            syncFirstRoleToAll()
+        }
+
         // 初始化回显配置（从本地读取已保存的配置）
         loadSettings()
     }
@@ -229,6 +234,49 @@ class GeneralSettingsFragment : Fragment() {
         // 将对象列表转为 JSON (如果你还没引入 Gson 库，建议在 build.gradle 加上)
          val json = Gson().toJson(roleList)
          ConfigManager.saveRoleDataJson(requireContext(), json)
+    }
+
+    /**
+     * 将角色1的配置同步给所有角色
+     */
+    private fun syncFirstRoleToAll() {
+        val container = binding.containerRoles
+        if (container.childCount < 2) {
+            Toast.makeText(requireContext(), "请生成至少两个角色", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 1. 获取第一个角色的配置
+        val firstView = container.getChildAt(0)
+        val firstBinding = ItemRoleConfigBinding.bind(firstView)
+        
+        val isEnabled = firstBinding.switchRoleEnable.isChecked
+        val dailyTask = firstBinding.spinnerDailyTask.text.toString()
+        val boss = firstBinding.cbBoss.isChecked
+        val decompose = firstBinding.cbDecompose.isChecked
+        val mail = firstBinding.cbMail.isChecked
+
+        // 2. 遍历并同步给其他角色
+        for (i in 1 until container.childCount) {
+            val itemView = container.getChildAt(i)
+            val itemBinding = ItemRoleConfigBinding.bind(itemView)
+
+            // 设置状态
+            itemBinding.switchRoleEnable.isChecked = isEnabled
+            itemBinding.spinnerDailyTask.setText(dailyTask, false)
+            itemBinding.cbBoss.isChecked = boss
+            itemBinding.cbDecompose.isChecked = decompose
+            itemBinding.cbMail.isChecked = mail
+
+            // 触发 UI 禁用/启用联动 (手动触发 listener 逻辑)
+            itemBinding.switchRoleEnable.alpha = if (isEnabled) 1.0f else 0.5f
+            itemBinding.spinnerDailyTask.isEnabled = isEnabled
+            itemBinding.cbBoss.isEnabled = isEnabled
+            itemBinding.cbDecompose.isEnabled = isEnabled
+            itemBinding.cbMail.isEnabled = isEnabled
+        }
+
+        Toast.makeText(requireContext(), "已将角色1的配置同步至所有角色", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {
