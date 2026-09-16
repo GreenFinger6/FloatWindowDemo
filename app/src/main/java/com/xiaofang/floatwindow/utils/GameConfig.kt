@@ -126,6 +126,7 @@ object Dungeon {
     const val TPL_REPAIR_EQUIP1 = "button_repairEquip1"     // 修理装备1
     const val TPL_CLOSE = "button_close"     // 关闭
     const val TPL_TASK_MENU = "button_task"            // 委托菜单
+    const val TPL_DAILY_DUNGEON = "buttonDailyDungeon"   // 日常地下城
     const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊
     const val TPL_CONFIRM = "button_confirm"           // 确认
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
@@ -145,6 +146,9 @@ object Dungeon {
     const val TPL_DECOMPOSE_CONFIRM = "button_decompose_confirm"    // 分解确认
     const val TPL_EMAIL = "button_email"    // 邮件
     const val TPL_CLAIM_MAIL = "button_claimMail"    // 领取邮件
+    const val TPL_ENHANCE_ORB = "button_EnhanceOrb"    // 强化宝珠
+    const val TPL_SILVER_BADGE = "button_silver_badge"    // 银色徽章
+
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
@@ -155,6 +159,7 @@ object Dungeon {
         TPL_REPAIR_EQUIP1,
         TPL_CLOSE,
         TPL_TASK_MENU,
+        TPL_DAILY_DUNGEON,
         TPL_DUNGEON_TAB,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
@@ -173,12 +178,23 @@ object Dungeon {
         TPL_DECOMPOSE2,
         TPL_DECOMPOSE_CONFIRM,
         TPL_EMAIL,
-        TPL_CLAIM_MAIL
+        TPL_CLAIM_MAIL,
+        TPL_ENHANCE_ORB,
+        TPL_SILVER_BADGE
+    )
+
+    // 进化之路
+    val entryEvolutionPath = listOf(
+        TPL_TASK_MENU,
+        TPL_ENTRY_GATE,
+        TPL_ENHANCE_ORB,
+        TPL_CONFIRM
     )
 
     // 进入多维秘境
     val entrySequence = listOf(
         TPL_TASK_MENU,
+        TPL_DAILY_DUNGEON,
         TPL_DUNGEON_TAB,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,

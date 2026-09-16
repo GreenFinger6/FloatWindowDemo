@@ -53,10 +53,10 @@ class GeneralSettingsFragment : Fragment() {
             val countStr = binding.editRoleCount.text.toString()
             val count = countStr.toIntOrNull() ?: 0
 
-            if (count in 1..24) {
+            if (count in 1..26) {
                 generateRoleList(count)
             } else {
-                Toast.makeText(requireContext(), "请输入1-24之间的数字", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "最多支持26个角色", Toast.LENGTH_SHORT).show()
             }
         }
 
