@@ -146,7 +146,7 @@ class AuctionManager(private val context: Context) {
             }
         }
         // 更新状态信息
-        updateStatus("目标价:$targetPrice, 数量:$targetQty; 已购：$purchasedQty, 最低价:$minPrice, 成功率: ${successBuyCount.toDouble() / attemptBuyCount}")
+        updateStatus("目标价:$targetPrice, 数量:$targetQty, 已购:$purchasedQty, 最低价:$minPrice, 成功率:${successBuyCount}/${attemptBuyCount}, 当前价格:$price")
 
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)

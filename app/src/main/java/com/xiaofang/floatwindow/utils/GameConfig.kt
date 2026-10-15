@@ -168,6 +168,7 @@ object Dungeon {
         TPL_START_GAME,
         TPL_SELECT_HERO,
         TPL_PAST_DUNGEON,
+        TPL_PAST_PIG_DUNGEON,
         TPL_PAST_ENTRUST,
         TPL_PRE_ENTRY,
         TPL_SECRET_SHOP,
