@@ -131,12 +131,14 @@ object Dungeon {
     const val TPL_CONFIRM = "button_confirm"           // 确认
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
     const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
+    const val TPL_ENTRY_GATE1 = "button_entry1"          // 入场按钮1
     const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
     const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
     const val TPL_PAST_DUNGEON = "button_past_dungeon"    // 老深渊
     const val TPL_PAST_PIG_DUNGEON = "button_past_big_dungeon"    // 大深渊
     const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
     const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
+    const val TPL_PRE_ENTRY1 = "button_pre_entry1"    // 入场
     const val TPL_SECRET_SHOP = "button_secret_shop"    // 神秘商店
     const val TPL_SECRET_SHOP_REFRESH = "button_secret_shop_refresh"    // 神秘商店免费刷新
     const val TPL_SECRET_SHOP_BUY = "button_secret_shop_buy"    // 神秘商店购买
@@ -165,12 +167,14 @@ object Dungeon {
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
         TPL_ENTRY_GATE,
+        TPL_ENTRY_GATE1,
         TPL_START_GAME,
         TPL_SELECT_HERO,
         TPL_PAST_DUNGEON,
         TPL_PAST_PIG_DUNGEON,
         TPL_PAST_ENTRUST,
         TPL_PRE_ENTRY,
+        TPL_PRE_ENTRY1,
         TPL_SECRET_SHOP,
         TPL_SECRET_SHOP_REFRESH,
         TPL_SECRET_SHOP_BUY,
@@ -217,8 +221,8 @@ object Dungeon {
         TPL_TASK_MENU,
         TPL_PAST_ENTRUST,
         TPL_PAST_PIG_DUNGEON,
-        TPL_PRE_ENTRY,
-        TPL_ENTRY_GATE
+        TPL_PRE_ENTRY1,
+        TPL_ENTRY_GATE1
     )
 
     // key:副本名称，value:步骤List
