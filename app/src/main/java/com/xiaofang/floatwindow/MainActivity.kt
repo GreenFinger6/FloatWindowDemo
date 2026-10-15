@@ -82,10 +82,13 @@ class MainActivity : AppCompatActivity() {
         binding.btnSaveConfig.setOnClickListener {
             generalSettingsFragment.saveSettings()
             otherSettingsFragment.saveSettings()
-            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "设置保存成功", Toast.LENGTH_SHORT).show()
         }
         // 开启悬浮窗按钮
         binding.btnStartFloat.setOnClickListener {
+            generalSettingsFragment.saveSettings()
+            otherSettingsFragment.saveSettings()
+            Toast.makeText(this, "设置保存成功", Toast.LENGTH_SHORT).show()
             handleStartFlow()
         }
         // 关闭悬浮窗按钮
