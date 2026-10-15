@@ -10,7 +10,7 @@
         android:id="@+id/iv_float_ball"
         android:layout_width="@dimen/float_size"
         android:layout_height="@dimen/float_size"
-        android:src="@mipmap/ic_launcher"
+        android:src="@mipmap/ic_robit"
         android:background="@drawable/float_ball_bg"
         android:padding="@dimen/float_margin"/>
 
