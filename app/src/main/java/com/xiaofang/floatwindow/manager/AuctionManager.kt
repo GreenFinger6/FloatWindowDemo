@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.xiaofang.floatwindow.service.AutomationService
+import com.xiaofang.floatwindow.service.updateStatus
 import com.xiaofang.floatwindow.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -62,7 +63,6 @@ class AuctionManager(private val context: Context) {
                 delay(UI_CD.milliseconds)
             }
         }
-
         return false
 
     }
@@ -145,6 +145,8 @@ class AuctionManager(private val context: Context) {
                 } else doPurchase(price, quantity)
             }
         }
+        // 更新状态信息
+        updateStatus("目标价:$targetPrice, 数量:$targetQty; 已购：$purchasedQty, 最低价:$minPrice, 成功率: ${successBuyCount.toDouble() / attemptBuyCount}")
 
         // 操作完后，返回商品列表
         AutomationService.instance?.click(Auction.Buttons.Back)

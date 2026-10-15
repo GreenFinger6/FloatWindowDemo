@@ -57,7 +57,6 @@ class GameManager(context: Context) {
                 if(autoBattle(bitmap)){
                     // 当前角色战斗结束
                     Log.i(TAG,"角色${countHero+1}战斗结束")
-                    updateStatus("角色${countHero + 1}:${roleList[countHero].dailyTask}任务完成, 准备切换角色")
 
                     // 神秘商店
                     secretShop()
@@ -67,6 +66,8 @@ class GameManager(context: Context) {
 
                     // 领取邮件
                     claimMail()
+
+                    updateStatus("角色${countHero + 1}:${roleList[countHero].dailyTask}任务完成, 准备切换角色")
 
                     // 返回角色选择界面
                     backSelectHero()

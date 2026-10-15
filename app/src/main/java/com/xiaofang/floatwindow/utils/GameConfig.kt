@@ -134,6 +134,7 @@ object Dungeon {
     const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
     const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
     const val TPL_PAST_DUNGEON = "button_past_dungeon"    // 老深渊
+    const val TPL_PAST_PIG_DUNGEON = "button_past_big_dungeon"    // 大深渊
     const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
     const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
     const val TPL_SECRET_SHOP = "button_secret_shop"    // 神秘商店
@@ -210,10 +211,20 @@ object Dungeon {
         TPL_ENTRY_GATE
     )
 
+    // 进入过去的大深渊
+    val entryPastBigDungeon = listOf(
+        TPL_TASK_MENU,
+        TPL_PAST_ENTRUST,
+        TPL_PAST_PIG_DUNGEON,
+        TPL_PRE_ENTRY,
+        TPL_ENTRY_GATE
+    )
+
     // key:副本名称，value:步骤List
     val dungeonStepMap: Map<String, List<String>> = mapOf(
-        "深渊秘境" to entrySequence,
-        "老深渊" to entryPastDungeon
+        "深渊:时空秘境" to entrySequence,
+        "深渊:失调次元" to entryPastDungeon,
+        "深渊:塔尔坦炼器所" to entryPastBigDungeon
     )
 
     // 背包分解
