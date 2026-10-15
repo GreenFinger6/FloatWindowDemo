@@ -7,6 +7,7 @@ import com.xiaofang.floatwindow.service.AutomationService
 import com.xiaofang.floatwindow.utils.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.xiaofang.floatwindow.service.updateStatus
 import kotlinx.coroutines.Delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -56,13 +57,13 @@ class GameManager(context: Context) {
                 if(autoBattle(bitmap)){
                     // 当前角色战斗结束
                     Log.i(TAG,"角色${countHero+1}战斗结束")
+                    updateStatus("角色${countHero + 1}:${roleList[countHero].dailyTask}任务完成, 准备切换角色")
 
                     // 神秘商店
-                    // TODO: 此时如果有人邀请导致未成功返回主界面会卡死 
                     secretShop()
 
                     // 分解装备
-                    SequenceClicker.runSequence(Dungeon.decomposeBag)
+                    decomposeBag()
 
                     // 领取邮件
                     claimMail()
@@ -81,6 +82,8 @@ class GameManager(context: Context) {
                 // 循环向后找启用的角色
                 while (++countHero < roleList.size) {
                     if (roleList[countHero].isEnabled) {
+                        updateStatus("选择角色${countHero + 1}进入游戏")
+
                         // 选择下一个启用的角色进入城镇
                         switchHero(countHero)
 
@@ -88,6 +91,7 @@ class GameManager(context: Context) {
                         closeAd()
 
                         // 根据任务选择进入深渊
+                        updateStatus("角色${countHero + 1}正在完成${roleList[countHero].dailyTask}...")
                         SequenceClicker.runSequence(Dungeon.dungeonStepMap.getOrDefault(roleList[countHero].dailyTask, Dungeon.entryPastDungeon))
 
                         // 更新是否在城镇
@@ -282,6 +286,7 @@ class GameManager(context: Context) {
      */
     suspend fun secretShop(): Boolean {
         Log.i(TAG, "开始执行神秘商店任务")
+        updateStatus("执行神秘商店任务")
 
         // 循环寻找神秘商店图标
         while (true) {
@@ -350,15 +355,41 @@ class GameManager(context: Context) {
         }
 
         Log.i(TAG, "神秘商店任务执行完毕")
-        AutomationService.instance?.performBack()
         return true
     }
+    /**
+     * 分解装备：进入商店 -> 自动购买 -> 免费刷新 -> 退出
+     */
+    suspend fun decomposeBag(): Boolean{
+        Log.i(TAG, "开始分解装备")
+        updateStatus("分解装备")
 
+        // 循环寻找背包图标
+        while (true) {
+            // 尝试返回
+            AutomationService.instance?.performBack()
+            // 给 UI 反应时间
+            delay(1200L)
+            val frame = ScreenCaptureManager.frameFlow.first()
+            try {
+                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_BAG)
+                if (foundMenu != null) {
+                    Log.d(TAG, "检测到背包图标")
+                    break // 菜单已开，跳出循环
+                }
+            } finally {
+                frame.recycle()
+            }
+        }
+
+        return SequenceClicker.runSequence(Dungeon.decomposeBag)
+    }
     /**
      * 领取角色邮件：点击邮件 -> 寻找可能领取的物品
      */
     suspend fun claimMail(): Boolean{
         Log.i(TAG, "开始领取角色邮件")
+        updateStatus("领取角色邮件")
 
         // 循环寻找邮件图标
         while (true) {

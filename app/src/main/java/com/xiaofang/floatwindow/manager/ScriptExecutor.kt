@@ -99,6 +99,7 @@ class ScriptExecutor(private val context: Context) {
         isWaitingSchedule = true
         monitorJob = scope.launch(Dispatchers.IO) {
             Log.d(TAG, "定时监控协程已启动，等待目标时间")
+            updateStatus("等待定时启动")
             while (isActive && isRunning && isWaitingSchedule) {
                 try {
                     val config = ConfigManager.getScheduleConfig(context)
@@ -124,7 +125,6 @@ class ScriptExecutor(private val context: Context) {
                                     else -> Log.w(TAG, "定时启动失败：未定义对应索引的任务")
                                 }
                                 showToast("定时启动成功")
-                                updateStatus("等待定时启动")
                             }
 
                             // 如果是“仅一次”模式，则直接结束监控任务
