@@ -1,19 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:paddingTop="20dp"> <!-- 距离屏幕顶部一定距离 -->
+    android:layout_height="match_parent">
 
+    <!-- 顶部居中提示弹窗 Toast -->
     <TextView
         android:id="@+id/tv_toast_content"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="20dp"
         android:background="@drawable/shape_toast_bg"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"
         android:elevation="10dp"
         android:paddingHorizontal="20dp"
         android:paddingVertical="8dp"
-        android:text="提示消息" />
+        android:text="提示消息"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- 左下角常显长方形任务状态 TextView -->
+    <TextView
+        android:id="@+id/tv_task_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/shape_status_bg"
+        android:elevation="10dp"
+        android:text="脚本已就绪"
+        android:textColor="#00FF88"
+        android:textSize="12sp"
+        android:visibility="visible" />
 </FrameLayout>

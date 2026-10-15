@@ -27,6 +27,23 @@ import com.xiaofang.floatwindow.manager.ScreenCaptureManager
 import com.xiaofang.floatwindow.manager.ScriptExecutor
 import com.xiaofang.floatwindow.utils.ConfigManager
 
+// 全局运行中的 Service 实例指针，支持扁平化顶层调用
+private var serviceInstance: FloatWindowService? = null
+
+/**
+ * 全局快捷函数：显示 Toast 提示
+ */
+fun showToast(message: String) {
+    serviceInstance?.showCustomToast(message)
+}
+
+/**
+ * 全局快捷函数：更新屏幕左下角常显任务状态（并自动刷新控制面板按钮）
+ */
+fun updateStatus(status: String) {
+    serviceInstance?.updateTaskStatus(status)
+}
+
 class FloatWindowService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var binding: FloatWindowBinding
@@ -45,6 +62,7 @@ class FloatWindowService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        serviceInstance = this
         setTheme(R.style.Theme_FloatWindow)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -58,14 +76,7 @@ class FloatWindowService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
 
         // Executor脚本执行实例
-        scriptExecutor = ScriptExecutor(this) { message ->
-            // 当收到消息更新时
-            showCustomToast(message)
-            // 自动同步按钮文字逻辑 使用 Handler 确保在主线程更新 UI
-            toastHandler.post {
-                updateUI()
-            }
-        }
+        scriptExecutor = ScriptExecutor(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -317,13 +328,13 @@ class FloatWindowService : Service() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
 
             format = PixelFormat.TRANSLUCENT
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.FILL
             width = WindowManager.LayoutParams.MATCH_PARENT
-            height = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.MATCH_PARENT
         }
 
         toastView = toastBinding?.root
-        toastView?.visibility = View.GONE // 初始隐藏
+        toastView?.visibility = View.VISIBLE // 根容器全屏保持可见
         windowManager.addView(toastView, toastParams)
     }
 
@@ -350,39 +361,54 @@ class FloatWindowService : Service() {
             .build()
     }
 
-    // 后台运行时消息显示方法
-    private fun showCustomToast(message: String) {
+    // 后台运行时消息显示方法 (仅控制顶部 Toast 消息)
+    fun showCustomToast(message: String) {
         // 1. 取消之前的隐藏任务
         toastHandler.removeCallbacksAndMessages(null)
 
-        val view = toastView ?: return
         val tvContent = toastBinding?.tvToastContent ?: return
 
         tvContent.text = message
 
         // 2. 显示动画：淡入 + 从上方滑入
-        if (view.visibility == View.GONE) {
-            view.visibility = View.VISIBLE
-            view.alpha = 0f
-            view.translationY = -50f // 初始向上偏移
-            view.animate()
+        if (tvContent.visibility != View.VISIBLE) {
+            tvContent.visibility = View.VISIBLE
+            tvContent.alpha = 0f
+            tvContent.translationY = -50f // 初始向上偏移
+            tvContent.animate()
                 .alpha(1f)
                 .translationY(0f)
                 .setDuration(300)
                 .start()
+        } else {
+            tvContent.animate().cancel()
+            tvContent.alpha = 1f
+            tvContent.translationY = 0f
         }
 
         // 3. 2.5秒后自动隐藏动画
         toastHandler.postDelayed({
-            view.animate()
+            tvContent.animate()
                 .alpha(0f)
                 .translationY(-50f)
                 .setDuration(300)
                 .withEndAction {
-                    view.visibility = View.GONE
+                    tvContent.visibility = View.GONE
                 }
                 .start()
         }, 2500)
+    }
+
+    /**
+     * 更新屏幕左下角常显的长方形任务状态文字，并同步刷新面板 UI
+     */
+    fun updateTaskStatus(status: String) {
+        toastHandler.post {
+            toastBinding?.tvTaskStatus?.let { tvStatus ->
+                tvStatus.text = status
+            }
+            updateUI()
+        }
     }
 
     /**
@@ -490,6 +516,8 @@ class FloatWindowService : Service() {
             @Suppress("DEPRECATION")
             stopForeground(true)
         }
+
+        serviceInstance = null
     }
 
     override fun onBind(intent: Intent?): IBinder? {

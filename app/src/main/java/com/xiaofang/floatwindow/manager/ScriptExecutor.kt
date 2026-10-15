@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.xiaofang.floatwindow.service.showToast
+import com.xiaofang.floatwindow.service.updateStatus
 import com.xiaofang.floatwindow.utils.Auction
 import com.xiaofang.floatwindow.utils.ConfigManager
 import com.xiaofang.floatwindow.utils.Dungeon
@@ -16,10 +18,7 @@ import com.xiaofang.floatwindow.utils.extractStamina
 import kotlinx.coroutines.*
 import java.util.*
 
-class ScriptExecutor(
-    private val context: Context,
-    private val onStatusUpdate: (String) -> Unit // 用于回调通知 Service 显示 Toast
-) {
+class ScriptExecutor(private val context: Context) {
     private val TAG = "ScriptExecutor"
     // 协程作用域，绑定到主线程，才能更新UI
     private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -50,7 +49,8 @@ class ScriptExecutor(
                 // 1. 开启物理截图流后台线程
                 ScreenCaptureManager.startStreamingFlow(context)
 
-                onStatusUpdate("脚本启动成功")
+                showToast("脚本启动成功")
+                updateStatus("状态: 运行中")
 
                 // 2. 开始消费画面流
                 // 由于 Channel 设置了 CONFLATED，这里 collect 拿到的永远是最新的 Bitmap
@@ -123,7 +123,8 @@ class ScriptExecutor(
                                     2 -> saveScreen()
                                     else -> Log.w(TAG, "定时启动失败：未定义对应索引的任务")
                                 }
-                                onStatusUpdate("定时启动成功")
+                                showToast("定时启动成功")
+                                updateStatus("等待定时启动")
                             }
 
                             // 如果是“仅一次”模式，则直接结束监控任务
@@ -153,7 +154,8 @@ class ScriptExecutor(
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
             if (SequenceClicker.runSequence(Dungeon.entryPastDungeon)) {
-                onStatusUpdate("任务序列已执行完毕")
+                showToast("任务序列已执行完毕")
+                updateStatus("所有任务执行完成")
                 stop()
             }
         }
@@ -175,7 +177,8 @@ class ScriptExecutor(
         runStreamingTask { bitmap ->
             // 保存图片
             OpencvUtil.saveDebugBitmap(context, bitmap)
-            onStatusUpdate("截图已保存")
+            showToast("截图已保存")
+            updateStatus("状态: 就绪")
             stop()
         }
     }
@@ -185,7 +188,8 @@ class ScriptExecutor(
         runStreamingTask { bitmap ->
             auction.secretShop()
             if (SequenceClicker.runSequence(Dungeon.decomposeBag)) {
-                onStatusUpdate("任务完成")
+                showToast("任务完成")
+                updateStatus("测试任务完成")
                 stop()
             }
         }
@@ -199,7 +203,8 @@ class ScriptExecutor(
         val auction = AuctionManager(context)
         runStreamingTask { bitmap ->
             if (auction.onFrame(bitmap)) {
-                onStatusUpdate("任务完成")
+                showToast("任务完成")
+                updateStatus("拍卖行抢拍完成")
                 stop()
             }
         }
@@ -214,7 +219,8 @@ class ScriptExecutor(
         val dungeon = GameManager(context)
         runStreamingTask { bitmap ->
             if (dungeon.onFrame(bitmap)) {
-                onStatusUpdate("任务完成")
+                showToast("任务完成")
+                updateStatus("任务完成")
                 stop()
             }
         }
@@ -266,5 +272,6 @@ class ScriptExecutor(
         
         YoloUtil.release() // 脚本停止时清理 C++ 层模型缓存
         OpencvUtil.releaseTemplates() // 释放模版缓存
+        updateStatus("脚本已就绪")
     }
 }
