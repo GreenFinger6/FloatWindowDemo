@@ -127,18 +127,19 @@ object Dungeon {
     const val TPL_CLOSE = "button_close"     // 关闭
     const val TPL_TASK_MENU = "button_task"            // 委托菜单
     const val TPL_DAILY_DUNGEON = "buttonDailyDungeon"   // 日常地下城
-    const val TPL_DUNGEON_TAB = "button_dungeon"       // 深渊
+    const val TPL_DUNGEON_MYSTERY = "button_dungeon_mystery"       // 多维秘境
+    const val TPL_DUNGEON = "button_dungeon"    // 深渊
+    const val TPL_WARRIOR_DUNGEON = "warrior_dungeon"    // 勇士地下城
     const val TPL_CONFIRM = "button_confirm"           // 确认
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
     const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
     const val TPL_ENTRY_GATE1 = "button_entry1"          // 入场按钮1
     const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
     const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
-    const val TPL_PAST_DUNGEON = "button_past_dungeon"    // 老深渊
-    const val TPL_PAST_PIG_DUNGEON = "button_past_big_dungeon"    // 大深渊
     const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
     const val TPL_PRE_ENTRY = "button_pre_entry"    // 入场
     const val TPL_PRE_ENTRY1 = "button_pre_entry1"    // 入场
+    const val TPL_ADVENTURE = "button_adventure"    // 冒险
     const val TPL_SECRET_SHOP = "button_secret_shop"    // 神秘商店
     const val TPL_SECRET_SHOP_REFRESH = "button_secret_shop_refresh"    // 神秘商店免费刷新
     const val TPL_SECRET_SHOP_BUY = "button_secret_shop_buy"    // 神秘商店购买
@@ -149,9 +150,6 @@ object Dungeon {
     const val TPL_DECOMPOSE_CONFIRM = "button_decompose_confirm"    // 分解确认
     const val TPL_EMAIL = "button_email"    // 邮件
     const val TPL_CLAIM_MAIL = "button_claimMail"    // 领取邮件
-    const val TPL_ENHANCE_ORB = "button_EnhanceOrb"    // 强化宝珠
-    const val TPL_SILVER_BADGE = "button_silver_badge"    // 银色徽章
-
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
@@ -163,15 +161,13 @@ object Dungeon {
         TPL_CLOSE,
         TPL_TASK_MENU,
         TPL_DAILY_DUNGEON,
-        TPL_DUNGEON_TAB,
+        TPL_DUNGEON_MYSTERY,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
         TPL_ENTRY_GATE,
         TPL_ENTRY_GATE1,
         TPL_START_GAME,
         TPL_SELECT_HERO,
-        TPL_PAST_DUNGEON,
-        TPL_PAST_PIG_DUNGEON,
         TPL_PAST_ENTRUST,
         TPL_PRE_ENTRY,
         TPL_PRE_ENTRY1,
@@ -185,51 +181,46 @@ object Dungeon {
         TPL_DECOMPOSE_CONFIRM,
         TPL_EMAIL,
         TPL_CLAIM_MAIL,
-        TPL_ENHANCE_ORB,
-        TPL_SILVER_BADGE
-    )
-
-    // 进化之路
-    val entryEvolutionPath = listOf(
-        TPL_TASK_MENU,
-        TPL_ENTRY_GATE,
-        TPL_ENHANCE_ORB,
-        TPL_CONFIRM
+        TPL_DUNGEON,
+        TPL_WARRIOR_DUNGEON,
+        TPL_ADVENTURE
     )
 
     // 进入多维秘境
     val entrySequence = listOf(
         TPL_TASK_MENU,
         TPL_DAILY_DUNGEON,
-        TPL_DUNGEON_TAB,
+        TPL_DUNGEON_MYSTERY,
         TPL_CONFIRM,
         TPL_DUNGEON_SELECT,
         TPL_ENTRY_GATE
     )
 
     // 进入深渊
-    val entryPastDungeon = listOf(
+    val entryDungeon = listOf(
         TPL_TASK_MENU,
-        TPL_PAST_ENTRUST,
-        TPL_PAST_DUNGEON,
+        TPL_DUNGEON,
         TPL_PRE_ENTRY,
         TPL_ENTRY_GATE
     )
 
-    // 进入过去的大深渊
-    val entryPastBigDungeon = listOf(
+    // 进入勇士地下城
+    val entryWarriorDungeon = listOf(
         TPL_TASK_MENU,
-        TPL_PAST_ENTRUST,
-        TPL_PAST_PIG_DUNGEON,
-        TPL_PRE_ENTRY1,
-        TPL_ENTRY_GATE1
+        TPL_WARRIOR_DUNGEON,
+        TPL_ENTRY_GATE
     )
 
     // key:副本名称，value:步骤List
     val dungeonStepMap: Map<String, List<String>> = mapOf(
         "深渊:时空秘境" to entrySequence,
-        "深渊:失调次元" to entryPastDungeon,
-        "深渊:塔尔坦炼器所" to entryPastBigDungeon
+        "深渊:诡密书库" to entryDungeon,
+        "勇士地下城" to entryWarriorDungeon
+    )
+    // 进入神秘商店
+    val secretShop = listOf(
+        TPL_ADVENTURE,
+        TPL_SECRET_SHOP
     )
 
     // 背包分解

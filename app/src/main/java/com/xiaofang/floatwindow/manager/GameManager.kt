@@ -8,7 +8,6 @@ import com.xiaofang.floatwindow.utils.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.xiaofang.floatwindow.service.updateStatus
-import kotlinx.coroutines.Delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -93,7 +92,7 @@ class GameManager(context: Context) {
 
                         // 根据任务选择进入深渊
                         updateStatus("角色${countHero + 1}正在完成${roleList[countHero].dailyTask}...")
-                        SequenceClicker.runSequence(Dungeon.dungeonStepMap.getOrDefault(roleList[countHero].dailyTask, Dungeon.entryPastDungeon))
+                        SequenceClicker.runSequence(Dungeon.dungeonStepMap.getOrDefault(roleList[countHero].dailyTask, Dungeon.entryDungeon))
 
                         // 更新是否在城镇
                         isTown = false
@@ -197,10 +196,10 @@ class GameManager(context: Context) {
         while (count < 15) {
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
-                val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)
+                val emailLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_ADVENTURE)
                 val confirmLoc = OpencvUtil.findInFrame(frame,Dungeon.TPL_CONFIRM)
                 if (emailLoc != null && confirmLoc == null) {
-                    // 以神秘商店与确认按钮来判断是否成功进入游戏
+                    // 以冒险与确认按钮来判断是否成功进入游戏
                     count++
                 }else{
                     // 尝试返回
@@ -297,9 +296,9 @@ class GameManager(context: Context) {
             delay(1200L)
             val frame = ScreenCaptureManager.frameFlow.first()
             try {
-                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_SECRET_SHOP)
+                val foundMenu = OpencvUtil.findInFrame(frame,Dungeon.TPL_ADVENTURE)
                 if (foundMenu != null) {
-                    Log.d(TAG, "检测到神秘商店图标")
+                    Log.d(TAG, "检测到冒险图标")
                     break // 菜单已开，跳出循环
                 }
             } finally {
@@ -308,14 +307,14 @@ class GameManager(context: Context) {
         }
 
         // 1. 尝试进入商店
-        val entryLoc = retryFind(Dungeon.TPL_SECRET_SHOP, 10)
+        val entryLoc = retryFind(Dungeon.TPL_ADVENTURE, 10)
         if (entryLoc == null) {
             Log.w(TAG, "未检测到神秘商店图标，跳过该任务")
             return false
         }
 
-        Log.d(TAG, "点击神秘商店")
-        AutomationService.instance?.click(entryLoc)
+        Log.d(TAG, "进入神秘商店")
+        SequenceClicker.runSequence(Dungeon.secretShop)
         delay(UI_CD * 4) // 等待商店界面打开
 
         // 2. 商店内部逻辑循环 (优先级：购买 > 刷新 > 确认)

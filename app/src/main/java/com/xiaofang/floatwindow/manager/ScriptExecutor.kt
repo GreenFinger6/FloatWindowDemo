@@ -150,10 +150,10 @@ class ScriptExecutor(private val context: Context) {
      * 执行一系列点击任务
      */
     fun execute() {
-        OpencvUtil.preloadTemplates(context, Dungeon.entryPastDungeon)
+        OpencvUtil.preloadTemplates(context, Dungeon.entryDungeon)
         runStreamingTask { bitmap ->
             // processFrame 会处理所有细节，我们只需要判断是否结束
-            if (SequenceClicker.runSequence(Dungeon.entryPastDungeon)) {
+            if (SequenceClicker.runSequence(Dungeon.entryDungeon)) {
                 showToast("任务序列已执行完毕")
                 updateStatus("所有任务执行完成")
                 stop()
