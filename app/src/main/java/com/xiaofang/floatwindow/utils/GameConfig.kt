@@ -208,7 +208,7 @@ object Dungeon {
     val entryWarriorDungeon = listOf(
         TPL_TASK_MENU,
         TPL_WARRIOR_DUNGEON,
-        TPL_ENTRY_GATE
+        TPL_ENTRY_GATE1
     )
 
     // key:副本名称，value:步骤List
