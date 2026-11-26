@@ -155,13 +155,6 @@ class GameManager(context: Context) {
                             if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
                             else true // 告知 Service 任务切换回城镇模式
                         }
-                        againLoc != null -> {
-                            Log.i(TAG, "点击：再次挑战")
-                            AutomationService.instance?.click(againLoc)
-                            // 点击后稍微缓冲
-                            delay(UI_CD)
-                            false
-                        }
                         repairLoc != null ->{
                             Log.i(TAG, "点击：修理装备")
                             if(SequenceClicker.runSequence(Dungeon.repairEquipment)){
@@ -170,9 +163,16 @@ class GameManager(context: Context) {
                             }
                             false
                         }
+                        againLoc != null -> {
+                            Log.i(TAG, "点击：再次挑战")
+                            AutomationService.instance?.click(againLoc)
+                            // 点击后稍微缓冲
+                            delay(UI_CD*4)
+                            false
+                        }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
-                            AutomationService.instance?.click(Dungeon.Buttons.Right, 10L)
+                            AutomationService.instance?.click(Dungeon.Buttons.Center, 10L)
                             AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
                             false
                         }
