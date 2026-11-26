@@ -27,7 +27,10 @@ class GeneralSettingsFragment : Fragment() {
         )
     }
     companion object { // 静态常量
+        // 当前可执行主任务列表
         private val MAIN_TASKS = arrayOf("拍卖行抢拍", "多角色任务", "测试任务")
+        // 当前多角色可执行任务列表
+        private val MAIN_ROLE_TASKS = arrayOf("勇士地下城","深渊:诡密书库", "深渊:时空秘境")
     }
 
     override fun onCreateView(
@@ -149,7 +152,7 @@ class GeneralSettingsFragment : Fragment() {
         itemBinding.switchRoleEnable.text = "角色 $index"
 
         // 2. 初始化下拉框选项
-        val tasks = arrayOf("深渊:时空秘境", "深渊:失调次元", "深渊:塔尔坦炼器所")
+        val tasks = MAIN_ROLE_TASKS
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, tasks)
         itemBinding.spinnerDailyTask.setAdapter(adapter)
         // 默认选中第一个
