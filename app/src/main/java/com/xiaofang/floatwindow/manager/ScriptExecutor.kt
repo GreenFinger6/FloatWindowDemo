@@ -184,10 +184,8 @@ class ScriptExecutor(private val context: Context) {
     }
     fun test(){
         OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
-        val auction = GameManager(context)
-        runStreamingTask { bitmap ->
-            auction.secretShop()
-            if (SequenceClicker.runSequence(Dungeon.decomposeBag)) {
+        runStreamingTask { _ ->
+            if (SequenceClicker.runSequence(Dungeon.secretShop,false)) {
                 showToast("任务完成")
                 updateStatus("测试任务完成")
                 stop()

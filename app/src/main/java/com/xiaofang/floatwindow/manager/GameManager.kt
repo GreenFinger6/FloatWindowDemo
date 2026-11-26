@@ -159,7 +159,7 @@ class GameManager(context: Context) {
                             Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc)
                             // 点击后稍微缓冲
-                            // delay(UI_CD)
+                            delay(UI_CD)
                             false
                         }
                         repairLoc != null ->{
