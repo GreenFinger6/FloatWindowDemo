@@ -100,7 +100,7 @@ object Dungeon {
     object Buttons {
         val Attack = Pair(0.8618f, 0.8847f) // 攻击
         val Right = Pair(0.25f, 0.75f) // 向右移动
-
+        val Center = Pair(0.18f, 0.74f) // 轮盘中心
         // 角色选择界面，每个角色的坐标
         val SelectHeroList = listOf(
             Pair(0.1592f, 0.4778f),
@@ -134,6 +134,7 @@ object Dungeon {
     const val TPL_DUNGEON_SELECT = "button_dungeon1"   // 具体副本选择
     const val TPL_ENTRY_GATE = "button_entry"          // 入场按钮
     const val TPL_ENTRY_GATE1 = "button_entry1"          // 入场按钮1
+    const val TPL_ENTRY_GATE2 = "button_entry2"          // 入场按钮2
     const val TPL_START_GAME = "button_start_game"    // 选择英雄界面开始游戏
     const val TPL_SELECT_HERO = "button_select_hero"    // 设置界面选择角色
     const val TPL_PAST_ENTRUST = "button_past_entrust"    // 过去委托
@@ -150,6 +151,7 @@ object Dungeon {
     const val TPL_DECOMPOSE_CONFIRM = "button_decompose_confirm"    // 分解确认
     const val TPL_EMAIL = "button_email"    // 邮件
     const val TPL_CLAIM_MAIL = "button_claimMail"    // 领取邮件
+    const val TPL_STATE_INSUFFICIENT = "state_Insufficient"    // 疲劳值不足
 
     // 涉及的所有模版列表统一导入
     val allTemplates = listOf(
@@ -166,6 +168,7 @@ object Dungeon {
         TPL_DUNGEON_SELECT,
         TPL_ENTRY_GATE,
         TPL_ENTRY_GATE1,
+        TPL_ENTRY_GATE2,
         TPL_START_GAME,
         TPL_SELECT_HERO,
         TPL_PAST_ENTRUST,
@@ -183,7 +186,8 @@ object Dungeon {
         TPL_CLAIM_MAIL,
         TPL_DUNGEON,
         TPL_WARRIOR_DUNGEON,
-        TPL_ADVENTURE
+        TPL_ADVENTURE,
+        TPL_STATE_INSUFFICIENT
     )
 
     // 进入多维秘境
@@ -208,7 +212,7 @@ object Dungeon {
     val entryWarriorDungeon = listOf(
         TPL_TASK_MENU,
         TPL_WARRIOR_DUNGEON,
-        TPL_ENTRY_GATE1
+        TPL_ENTRY_GATE2
     )
 
     // key:副本名称，value:步骤List

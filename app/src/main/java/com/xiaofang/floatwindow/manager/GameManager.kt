@@ -137,7 +137,7 @@ class GameManager(context: Context) {
 
                     // 1. 并行启动三个识别任务
                     val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
-                    val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN) }
+                    val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_STATE_INSUFFICIENT) }
                     val repairMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_REPAIR_EQUIP) }
 
                     // 2. 等待识别结果
@@ -146,10 +146,20 @@ class GameManager(context: Context) {
                     val repairLoc = repairMatch.await()
 
                     when {
+                        backLoc != null -> {
+                            Log.i(TAG, "点击：返回城镇")
+                            val backTown = OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN)
+                            if(backTown != null)AutomationService.instance?.click(backTown)
+                            delay(UI_CD*4)      // 点击后稍微缓冲
+                            // 此时有可能还有物品没拾取完
+                            if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
+                            else true // 告知 Service 任务切换回城镇模式
+                        }
                         againLoc != null -> {
                             Log.i(TAG, "点击：再次挑战")
                             AutomationService.instance?.click(againLoc)
-                            delay(UI_CD*4)      // 点击后稍微缓冲
+                            // 点击后稍微缓冲
+                            // delay(UI_CD)
                             false
                         }
                         repairLoc != null ->{
@@ -160,17 +170,9 @@ class GameManager(context: Context) {
                             }
                             false
                         }
-                        backLoc != null -> {
-                            Log.i(TAG, "点击：返回城镇")
-                            AutomationService.instance?.click(backLoc)
-                            delay(UI_CD*4)      // 点击后稍微缓冲
-                            // 此时有可能还有物品没拾取完
-                            if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
-                            else true // 告知 Service 任务切换回城镇模式
-                        }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
-                            AutomationService.instance?.click(Dungeon.Buttons.Right, 50L)
+                            AutomationService.instance?.click(Dungeon.Buttons.Right, 10L)
                             AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
                             false
                         }
@@ -179,9 +181,9 @@ class GameManager(context: Context) {
 
                 // 优先级 : 正常战斗/寻路阶段
                 else -> {
-                    // 调用挂起式长按，此时协程会挂起 2s，collect 会自动跳过期间的帧
-                    AutomationService.instance?.click(Dungeon.Buttons.Right, 50L)
-                    AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
+                    // 自动拾取物品
+                    AutomationService.instance?.click(Dungeon.Buttons.Center, 10L)
+                    AutomationService.instance?.click(Dungeon.Buttons.Attack, 1000L)
                     false
                 }
             }
@@ -314,7 +316,7 @@ class GameManager(context: Context) {
         }
 
         Log.d(TAG, "进入神秘商店")
-        SequenceClicker.runSequence(Dungeon.secretShop)
+        SequenceClicker.runSequence(Dungeon.secretShop, false)
         delay(UI_CD * 4) // 等待商店界面打开
 
         // 2. 商店内部逻辑循环 (优先级：购买 > 刷新 > 确认)
