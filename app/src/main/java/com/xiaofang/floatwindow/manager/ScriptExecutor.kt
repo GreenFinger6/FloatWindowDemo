@@ -185,7 +185,7 @@ class ScriptExecutor(private val context: Context) {
     fun test(){
         OpencvUtil.preloadTemplates(context, Dungeon.allTemplates)
         runStreamingTask { _ ->
-            if (SequenceClicker.runSequence(Dungeon.secretShop,false)) {
+            if (SequenceClicker.runSequence(Dungeon.entrySequence,false)) {
                 showToast("任务完成")
                 updateStatus("测试任务完成")
                 stop()

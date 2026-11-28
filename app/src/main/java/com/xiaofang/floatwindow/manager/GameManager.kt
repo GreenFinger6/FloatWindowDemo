@@ -46,6 +46,7 @@ class GameManager(context: Context) {
             Log.d(TAG, "检测到确认弹窗，优先点击处理")
             AutomationService.instance?.click(confirmLoc)
             // 处理了弹窗后，本帧直接返回，不执行后续状态逻辑，等下一帧环境“干净”后再检测
+            delay(UI_CD*2)
             return false
         }
 
@@ -135,18 +136,20 @@ class GameManager(context: Context) {
                 // 优先级 : 结算阶段处理 (曾经检测到拾取，且当前拾取框已消失)
                 currentHasPickUp == null -> {
 
-                    // 1. 并行启动三个识别任务
+                    // 1. 并行启动识别任务
+                    val insufficientMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_STATE_INSUFFICIENT) }
                     val againMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_RE_CHALLENGE) }
-                    val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_STATE_INSUFFICIENT) }
+                    val backMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN) }
                     val repairMatch = async { OpencvUtil.findInFrame(bitmap, Dungeon.TPL_REPAIR_EQUIP) }
 
                     // 2. 等待识别结果
                     val againLoc = againMatch.await()
                     val backLoc = backMatch.await()
                     val repairLoc = repairMatch.await()
+                    val insufficientLoc = insufficientMatch.await()
 
                     when {
-                        backLoc != null -> {
+                        insufficientLoc != null -> {
                             Log.i(TAG, "点击：返回城镇")
                             val backTown = OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN)
                             if(backTown != null)AutomationService.instance?.click(backTown)
@@ -170,9 +173,21 @@ class GameManager(context: Context) {
                             delay(UI_CD*2)
                             false
                         }
+                        backLoc != null -> {
+                            Log.i(TAG, "点击：返回城镇")
+                            val backTown = OpencvUtil.findInFrame(bitmap, Dungeon.TPL_BACK_2_TOWN)
+                            if(backTown != null)AutomationService.instance?.click(backTown)
+                            delay(UI_CD*4)      // 点击后稍微缓冲
+                            // 此时有可能还有物品没拾取完
+                            if(retryFind(Dungeon.TPL_BACK_2_TOWN, 5) != null) false
+                            else true // 告知 Service 任务切换回城镇模式
+                        }
                         else -> {
                             // 虽已拾取但没出按钮，可能在翻牌，执行攻击动作保底
-                            AutomationService.instance?.click(Dungeon.Buttons.Center, 10L)
+                            // 秘境深渊默认按一下向右
+                            if(roleList[countHero].dailyTask == "深渊:时空秘境"){
+                                AutomationService.instance?.click(Dungeon.Buttons.Right, 50L)
+                            }else AutomationService.instance?.click(Dungeon.Buttons.Center, 10L)
                             AutomationService.instance?.click(Dungeon.Buttons.Attack, 2000L)
                             false
                         }
